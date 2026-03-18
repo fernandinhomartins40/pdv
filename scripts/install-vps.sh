@@ -9,6 +9,8 @@ PRIMARY_DOMAIN="${PRIMARY_DOMAIN:-revendeo.com.br}"
 SECONDARY_DOMAIN="${SECONDARY_DOMAIN:-www.revendeo.com.br}"
 WEB_PORT="${WEB_PORT:-3040}"
 API_PORT="${API_PORT:-3041}"
+TLS_ENABLED="${TLS_ENABLED:-1}"
+APP_SCHEME="${APP_SCHEME:-}"
 LOCAL_POSTGRES_ENABLED="${LOCAL_POSTGRES_ENABLED:-0}"
 LOCAL_POSTGRES_DB="${LOCAL_POSTGRES_DB:-revendeo}"
 LOCAL_POSTGRES_USER="${LOCAL_POSTGRES_USER:-revendeo_app}"
@@ -17,6 +19,18 @@ LOCAL_POSTGRES_PASSWORD="${LOCAL_POSTGRES_PASSWORD:-}"
 
 log() {
   printf '\n==> %s\n' "$1"
+}
+
+resolve_app_scheme() {
+  if [[ -n "${APP_SCHEME}" ]]; then
+    return
+  fi
+
+  if [[ "${TLS_ENABLED}" == "1" ]]; then
+    APP_SCHEME="https"
+  else
+    APP_SCHEME="http"
+  fi
 }
 
 require_root() {
@@ -74,18 +88,20 @@ write_env_file() {
   fi
 
   prepare_database_url
+  resolve_app_scheme
 
   if [[ -n "${DATABASE_URL:-}" ]]; then
     {
       printf '%s\n' "NODE_ENV=production"
       printf '%s\n' "NEXT_TELEMETRY_DISABLED=1"
       printf '%s\n' "DATABASE_URL=${DATABASE_URL}"
-      printf '%s\n' "NEXT_PUBLIC_APP_URL=https://${PRIMARY_DOMAIN}"
-      printf '%s\n' "NEXT_PUBLIC_API_URL=https://${PRIMARY_DOMAIN}/v1"
+      printf '%s\n' "NEXT_PUBLIC_APP_URL=${APP_SCHEME}://${PRIMARY_DOMAIN}"
+      printf '%s\n' "NEXT_PUBLIC_API_URL=${APP_SCHEME}://${PRIMARY_DOMAIN}/v1"
       printf '%s\n' "PRIMARY_DOMAIN=${PRIMARY_DOMAIN}"
       printf '%s\n' "SECONDARY_DOMAIN=${SECONDARY_DOMAIN}"
       printf '%s\n' "WEB_PORT=${WEB_PORT}"
       printf '%s\n' "API_PORT=${API_PORT}"
+      printf '%s\n' "TLS_ENABLED=${TLS_ENABLED}"
       printf '%s\n' "LOCAL_POSTGRES_ENABLED=${LOCAL_POSTGRES_ENABLED}"
       if [[ "${LOCAL_POSTGRES_ENABLED}" == "1" ]]; then
         printf '%s\n' "LOCAL_POSTGRES_DB=${LOCAL_POSTGRES_DB}"
@@ -105,6 +121,7 @@ run_deploy() {
   SECONDARY_DOMAIN="${SECONDARY_DOMAIN}" \
   WEB_PORT="${WEB_PORT}" \
   API_PORT="${API_PORT}" \
+  TLS_ENABLED="${TLS_ENABLED}" \
   LETSENCRYPT_EMAIL="${LETSENCRYPT_EMAIL:-}" \
   bash "${APP_DIR}/scripts/deploy-vps.sh"
 }

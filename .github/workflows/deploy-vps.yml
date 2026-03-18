@@ -164,8 +164,8 @@ jobs:
         if: success()
         run: |
           echo "Deploy concluido com sucesso"
-          echo "Painel: revendeo.com.br"
-          echo "Painel alternativo: www.revendeo.com.br"
-          echo "API: revendeo.com.br/v1"
-          echo "Health check: revendeo.com.br/health"
-          echo "HTTPS sera configurado automaticamente se LETSENCRYPT_EMAIL estiver definido."
+          echo "Painel: https://revendeo.com.br"
+          echo "Painel alternativo: https://www.revendeo.com.br"
+          echo "API: https://revendeo.com.br/v1"
+          echo "Health check: https://revendeo.com.br/health"
+          echo "HTTPS e provisionado automaticamente; LETSENCRYPT_EMAIL e opcional e serve apenas como contato de renovacao."

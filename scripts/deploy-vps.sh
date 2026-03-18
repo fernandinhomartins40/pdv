@@ -9,6 +9,7 @@ SECONDARY_DOMAIN="${SECONDARY_DOMAIN:-www.revendeo.com.br}"
 WEB_PORT="${WEB_PORT:-3040}"
 API_PORT="${API_PORT:-3041}"
 REQUIRED_NODE_MAJOR="${REQUIRED_NODE_MAJOR:-20}"
+TLS_ENABLED="${TLS_ENABLED:-1}"
 
 log() {
   printf '\n==> %s\n' "$1"
@@ -360,18 +361,34 @@ EOF
 }
 
 configure_tls() {
-  if [[ -z "${LETSENCRYPT_EMAIL:-}" ]]; then
-    log "LETSENCRYPT_EMAIL nao definido; mantendo configuracao HTTP"
+  local -a certbot_args
+
+  if [[ "${TLS_ENABLED}" != "1" ]]; then
+    log "TLS desativado por configuracao; mantendo aplicacao somente em HTTP"
     return
   fi
 
   log "Configurando TLS com Certbot"
   apt-get install -y certbot python3-certbot-nginx
 
-  certbot --nginx --non-interactive --agree-tos --keep-until-expiring --redirect \
-    -m "${LETSENCRYPT_EMAIL}" \
-    -d "${PRIMARY_DOMAIN}" \
+  certbot_args=(
+    --nginx
+    --non-interactive
+    --agree-tos
+    --keep-until-expiring
+    --redirect
+    -d "${PRIMARY_DOMAIN}"
     -d "${SECONDARY_DOMAIN}"
+  )
+
+  if [[ -n "${LETSENCRYPT_EMAIL:-}" ]]; then
+    certbot_args+=(-m "${LETSENCRYPT_EMAIL}")
+  else
+    log "LETSENCRYPT_EMAIL nao definido; registrando Certbot sem email de contato"
+    certbot_args+=(--register-unsafely-without-email)
+  fi
+
+  certbot "${certbot_args[@]}"
 }
 
 run_healthchecks() {
@@ -383,6 +400,8 @@ run_healthchecks() {
 }
 
 main() {
+  local public_scheme="http"
+
   require_root
   ensure_base_packages
   ensure_node
@@ -394,10 +413,14 @@ main() {
   configure_tls
   run_healthchecks
 
+  if [[ "${TLS_ENABLED}" == "1" ]]; then
+    public_scheme="https"
+  fi
+
   log "Deploy concluido"
-  echo "Painel: http://${PRIMARY_DOMAIN}"
-  echo "API: http://${PRIMARY_DOMAIN}/v1"
-  echo "Health: http://${PRIMARY_DOMAIN}/health"
+  echo "Painel: ${public_scheme}://${PRIMARY_DOMAIN}"
+  echo "API: ${public_scheme}://${PRIMARY_DOMAIN}/v1"
+  echo "Health: ${public_scheme}://${PRIMARY_DOMAIN}/health"
 }
 
 main "$@"
