@@ -44,6 +44,9 @@ repair_ubuntu_mirrors() {
 normalize_apt_sources() {
   local file
   local tmp
+  local line
+  local normalized
+  declare -A seen_entries=()
 
   shopt -s nullglob
 
@@ -52,19 +55,19 @@ normalize_apt_sources() {
 
     tmp="$(mktemp)"
 
-    awk '
-      /^[[:space:]]*#/ || /^[[:space:]]*$/ {
-        print
-        next
-      }
-      {
-        key = $0
-        gsub(/[[:space:]]+/, " ", key)
-        sub(/^ /, "", key)
-        sub(/ $/, "", key)
-      }
-      !seen[key]++ { print }
-    ' "${file}" >"${tmp}"
+    while IFS= read -r line || [[ -n "${line}" ]]; do
+      if [[ "${line}" =~ ^[[:space:]]*$ ]] || [[ "${line}" =~ ^[[:space:]]*# ]]; then
+        printf '%s\n' "${line}" >>"${tmp}"
+        continue
+      fi
+
+      normalized="$(printf '%s' "${line}" | tr -s '[:space:]' ' ' | sed -E 's/^ //; s/ $//')"
+
+      if [[ -z "${seen_entries[${normalized}]+x}" ]]; then
+        seen_entries["${normalized}"]=1
+        printf '%s\n' "${line}" >>"${tmp}"
+      fi
+    done <"${file}"
 
     if ! cmp -s "${file}" "${tmp}"; then
       log "Removendo entradas APT duplicadas em ${file}"
