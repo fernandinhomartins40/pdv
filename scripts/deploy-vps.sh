@@ -149,6 +149,27 @@ ensure_env_file() {
   set +a
 }
 
+ensure_local_postgres() {
+  if [[ "${LOCAL_POSTGRES_ENABLED:-0}" != "1" ]]; then
+    return
+  fi
+
+  log "Provisionando PostgreSQL local"
+  apt-get install -y postgresql
+  systemctl enable postgresql
+  systemctl start postgresql
+
+  if ! runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${LOCAL_POSTGRES_USER}'" | grep -q 1; then
+    runuser -u postgres -- psql -c "CREATE ROLE ${LOCAL_POSTGRES_USER} LOGIN PASSWORD '${LOCAL_POSTGRES_PASSWORD}'"
+  else
+    runuser -u postgres -- psql -c "ALTER ROLE ${LOCAL_POSTGRES_USER} WITH LOGIN PASSWORD '${LOCAL_POSTGRES_PASSWORD}'"
+  fi
+
+  if ! runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_database WHERE datname='${LOCAL_POSTGRES_DB}'" | grep -q 1; then
+    runuser -u postgres -- createdb -O "${LOCAL_POSTGRES_USER}" "${LOCAL_POSTGRES_DB}"
+  fi
+}
+
 apply_database_schema() {
   if [[ -d "${APP_DIR}/packages/database/prisma/migrations" ]] && find "${APP_DIR}/packages/database/prisma/migrations" -mindepth 1 -maxdepth 1 | read -r _; then
     log "Aplicando migrations versionadas do Prisma"
@@ -311,6 +332,7 @@ main() {
   ensure_base_packages
   ensure_node
   ensure_env_file
+  ensure_local_postgres
   build_apps
   configure_services
   configure_nginx
