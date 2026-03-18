@@ -14,6 +14,42 @@ log() {
   printf '\n==> %s\n' "$1"
 }
 
+normalize_apt_sources() {
+  local file
+  local tmp
+
+  shopt -s nullglob
+
+  for file in /etc/apt/sources.list /etc/apt/sources.list.d/*.list; do
+    [[ -f "${file}" ]] || continue
+
+    tmp="$(mktemp)"
+
+    awk '
+      /^[[:space:]]*#/ || /^[[:space:]]*$/ {
+        print
+        next
+      }
+      {
+        key = $0
+        gsub(/[[:space:]]+/, " ", key)
+        sub(/^ /, "", key)
+        sub(/ $/, "", key)
+      }
+      !seen[key]++ { print }
+    ' "${file}" >"${tmp}"
+
+    if ! cmp -s "${file}" "${tmp}"; then
+      log "Removendo entradas APT duplicadas em ${file}"
+      mv "${tmp}" "${file}"
+    else
+      rm -f "${tmp}"
+    fi
+  done
+
+  shopt -u nullglob
+}
+
 require_root() {
   if [[ "$(id -u)" -ne 0 ]]; then
     echo "Este script precisa ser executado como root."
@@ -23,6 +59,7 @@ require_root() {
 
 ensure_base_packages() {
   log "Instalando dependencias de sistema"
+  normalize_apt_sources
   apt-get update -y
   apt-get install -y curl ca-certificates git nginx
 }

@@ -17,7 +17,6 @@ import {
   ScanBarcode,
   Settings,
   ShoppingCart,
-  Trash2,
   UserRound,
   Wallet,
   X
@@ -27,7 +26,12 @@ import type { DesktopSettings } from "./contracts";
 interface CartItem {
   lineId: string;
   productId: string;
+  sku: string;
+  barcode?: string | null;
   productName: string;
+  unit: string;
+  ncm?: string | null;
+  cfop?: string | null;
   quantity: number;
   unitPrice: number;
   discountAmount: number;
@@ -65,6 +69,20 @@ function formatCurrency(value: number) {
   });
 }
 
+function formatDateTime(value: Date) {
+  return value.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function formatReceiptCode(item: CartItem) {
+  return item.barcode || item.sku || item.productId.slice(-6).toUpperCase();
+}
+
 function round(value: number) {
   return Number(value.toFixed(2));
 }
@@ -87,6 +105,7 @@ export function App() {
   const [online, setOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : false);
   const [syncPending, setSyncPending] = useState(0);
   const [cashSessionOpen, setCashSessionOpen] = useState(false);
+  const [saleStartedAt, setSaleStartedAt] = useState(() => new Date());
   const [statusMessage, setStatusMessage] = useState("Caixa pronto para iniciar uma nova venda.");
   const [lastSyncError, setLastSyncError] = useState<string | null>(null);
   const [settings, setSettings] = useState<DesktopSettings>({
@@ -114,6 +133,13 @@ export function App() {
   const totalAmount = useMemo(() => round(Math.max(subtotalAmount - discountAmount, 0)), [subtotalAmount, discountAmount]);
   const paidAmount = useMemo(() => round(payments.reduce((total, payment) => total + payment.amount, 0)), [payments]);
   const remainingAmount = useMemo(() => round(Math.max(totalAmount - paidAmount, 0)), [paidAmount, totalAmount]);
+  const totalUnits = useMemo(() => items.reduce((total, item) => total + item.quantity, 0), [items]);
+  const selectedItem = useMemo(() => items.find((item) => item.productId === selectedItemId) ?? null, [items, selectedItemId]);
+  const selectedItemIndex = useMemo(
+    () => (selectedItem ? items.findIndex((item) => item.productId === selectedItem.productId) + 1 : null),
+    [items, selectedItem]
+  );
+  const receiptPreviewNumber = useMemo(() => String(saleStartedAt.getTime()).slice(-8), [saleStartedAt]);
 
   useEffect(() => {
     void loadBootstrap();
@@ -162,6 +188,20 @@ export function App() {
 
     return () => window.clearInterval(timer);
   }, [online]);
+
+  useEffect(() => {
+    if (!items.length) {
+      if (selectedItemId !== null) {
+        setSelectedItemId(null);
+      }
+      return;
+    }
+
+    const hasSelectedItem = selectedItemId ? items.some((item) => item.productId === selectedItemId) : false;
+    if (!hasSelectedItem) {
+      setSelectedItemId(items[items.length - 1]?.productId ?? null);
+    }
+  }, [items, selectedItemId]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -326,6 +366,7 @@ export function App() {
     setPayments([]);
     setDiscountAmount(0);
     setSelectedItemId(null);
+    setSaleStartedAt(new Date());
     setStep("NEW_SALE");
     setQuery("");
     setStatusMessage(message);
@@ -403,6 +444,10 @@ export function App() {
   }
 
   function upsertItem(product: Product) {
+    if (items.length === 0) {
+      setSaleStartedAt(new Date());
+    }
+
     setItems((current) => {
       const existing = current.find((item) => item.productId === product.id);
       if (existing) {
@@ -422,7 +467,12 @@ export function App() {
         {
           lineId: crypto.randomUUID(),
           productId: product.id,
+          sku: product.sku,
+          barcode: product.barcode,
           productName: product.name,
+          unit: product.unit,
+          ncm: product.ncm,
+          cfop: product.cfop,
           quantity: 1,
           unitPrice: product.salePrice,
           discountAmount: 0,
@@ -740,16 +790,25 @@ export function App() {
             ) : null}
 
             <Card className="sale-table-card">
+              <div className="receipt-preview-header">
+                <span className="receipt-eyebrow">Pre-cupom operacional</span>
+                <strong>SIGE Lite PDV</strong>
+                <span>{settings.organizationId}</span>
+                <span>Loja/Caixa: {settings.storeId}</span>
+                <span>Operador: {operator.name}</span>
+                <span>Documento: {receiptPreviewNumber}</span>
+                <span>Emissao: {formatDateTime(saleStartedAt)}</span>
+              </div>
               <div className="sale-table-header">
-                <span>N°</span>
-                <span>Nome do Produto / Serviço</span>
-                <span>Quantidade (F4)</span>
-                <span>Valor Unitário (F5)</span>
+                <span>Item</span>
+                <span>Descricao</span>
+                <span>Dados</span>
+                <span>Unit.</span>
                 <span>Valor Total</span>
               </div>
               <div className="sale-table-body">
                 {items.length === 0 ? (
-                  <div className="empty-state">Nenhum item lançado. Digite um produto ou clique em uma sugestão acima.</div>
+                  <div className="empty-state">Nenhum item lancado. O cupom sera montado conforme os produtos forem inseridos.</div>
                 ) : (
                   items.map((item, index) => (
                     <button
@@ -759,61 +818,172 @@ export function App() {
                       onClick={() => setSelectedItemId(item.productId)}
                     >
                       <span>{index + 1}</span>
-                      <span className="row-name">{item.productName}</span>
-                      <span className="quantity-cell">
-                        <button
-                          className="qty-button negative"
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            updateQuantity(item.productId, item.quantity - 1);
-                          }}
-                        >
-                          <Minus size={14} />
-                        </button>
-                        <input
-                          className="qty-input"
-                          value={item.quantity}
-                          onChange={(event) => updateQuantity(item.productId, Number(event.target.value))}
-                        />
-                        <button
-                          className="qty-button positive"
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            updateQuantity(item.productId, item.quantity + 1);
-                          }}
-                        >
-                          <Plus size={14} />
-                        </button>
+                      <span className="row-name">
+                        {item.productName}
+                        <small className="row-subline">
+                          COD {formatReceiptCode(item)}  UN {item.unit}
+                        </small>
                       </span>
-                      <span>
-                        <input
-                          ref={(element) => {
-                            priceRefs.current[item.productId] = element;
-                          }}
-                          className="price-input"
-                          value={item.unitPrice.toFixed(2)}
-                          onChange={(event) => updateUnitPrice(item.productId, Number(event.target.value.replace(",", ".")))}
-                        />
+                      <span className="receipt-data-cell">
+                        {item.quantity} {item.unit}
                       </span>
-                      <span className="row-total">
+                      <span className="receipt-data-cell">{formatCurrency(item.unitPrice)}</span>
+                      <span className="row-total receipt-total">
                         {formatCurrency(item.totalAmount)}
-                        <button
-                          className="trash-button"
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            removeItem(item.productId);
-                          }}
-                        >
-                          <Trash2 size={16} />
-                        </button>
                       </span>
                     </button>
                   ))
                 )}
               </div>
+              <div className="receipt-preview-footer">
+                <div className="receipt-divider" />
+                <div className="receipt-summary-line">
+                  <span>Qtd. total de itens</span>
+                  <strong>{items.length}</strong>
+                </div>
+                <div className="receipt-summary-line">
+                  <span>Qtd. acumulada</span>
+                  <strong>{totalUnits}</strong>
+                </div>
+                <div className="receipt-summary-line">
+                  <span>Subtotal</span>
+                  <strong>{formatCurrency(subtotalAmount)}</strong>
+                </div>
+                <div className="receipt-summary-line">
+                  <span>Desconto</span>
+                  <strong>{formatCurrency(discountAmount)}</strong>
+                </div>
+                <div className="receipt-summary-line total">
+                  <span>Valor a pagar</span>
+                  <strong>{formatCurrency(totalAmount)}</strong>
+                </div>
+                <div className="receipt-divider dashed" />
+                <div className="receipt-section">
+                  <span className="receipt-section-label">Forma de pagamento</span>
+                  {payments.length === 0 ? (
+                    <div className="receipt-summary-line">
+                      <span>A informar</span>
+                      <strong>{formatCurrency(totalAmount)}</strong>
+                    </div>
+                  ) : (
+                    payments.map((payment) => (
+                      <div key={payment.method} className="receipt-summary-line">
+                        <span>{payment.label}</span>
+                        <strong>{formatCurrency(payment.amount)}</strong>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="receipt-divider dashed" />
+                <div className="receipt-section">
+                  <span className="receipt-section-label">Informacoes gerais</span>
+                  <div className="receipt-notes">
+                    <span>Caixa: {cashSessionOpen ? "ABERTO" : "FECHADO"}</span>
+                    <span>Sync: {lastSyncError ? "COM ALERTA" : "OPERACIONAL"}</span>
+                    <span>Operador: {operator.email}</span>
+                    <span>QR-Code e chave de acesso aparecem apos a emissao fiscal.</span>
+                  </div>
+                </div>
+                <div className="receipt-qr-placeholder">
+                  <span>QR NFC-e</span>
+                  <small>Liberado na emissao fiscal</small>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="item-focus-card">
+              <div className="item-focus-header">
+                <div>
+                  <span className="item-focus-eyebrow">Item em foco</span>
+                  <h3>{selectedItem ? selectedItem.productName : "Aguardando lancamento"}</h3>
+                  <p>
+                    {selectedItem
+                      ? `Linha ${String(selectedItemIndex).padStart(2, "0")} pronta para ajuste rapido no painel de funcoes.`
+                      : "Lance um produto para visualizar codigo, unidade, quantidade e valor nesta area."}
+                  </p>
+                </div>
+                <span className={`item-focus-badge ${selectedItem ? "active" : "idle"}`}>
+                  {selectedItem ? "Selecionado" : "Sem item"}
+                </span>
+              </div>
+
+              {selectedItem ? (
+                <>
+                  <div className="item-focus-meta">
+                    <div>
+                      <span>Codigo</span>
+                      <strong>{formatReceiptCode(selectedItem)}</strong>
+                    </div>
+                    <div>
+                      <span>SKU</span>
+                      <strong>{selectedItem.sku}</strong>
+                    </div>
+                    <div>
+                      <span>Unidade</span>
+                      <strong>{selectedItem.unit}</strong>
+                    </div>
+                    <div>
+                      <span>NCM / CFOP</span>
+                      <strong>
+                        {selectedItem.ncm ?? "--"} / {selectedItem.cfop ?? "--"}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className="item-focus-editors">
+                    <div className="item-input-card">
+                      <span>Quantidade (F4)</span>
+                      <div className="quantity-cell">
+                        <button className="qty-button negative" type="button" onClick={() => updateQuantity(selectedItem.productId, selectedItem.quantity - 1)}>
+                          <Minus size={14} />
+                        </button>
+                        <input
+                          className="qty-input"
+                          value={selectedItem.quantity}
+                          onChange={(event) => updateQuantity(selectedItem.productId, Number(event.target.value))}
+                        />
+                        <button className="qty-button positive" type="button" onClick={() => updateQuantity(selectedItem.productId, selectedItem.quantity + 1)}>
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <label className="item-input-card">
+                      <span>Valor unitario (F5)</span>
+                      <input
+                        ref={(element) => {
+                          priceRefs.current[selectedItem.productId] = element;
+                        }}
+                        className="price-input price-input-wide"
+                        value={selectedItem.unitPrice.toFixed(2)}
+                        onChange={(event) => updateUnitPrice(selectedItem.productId, Number(event.target.value.replace(",", ".")))}
+                      />
+                    </label>
+
+                    <div className="item-total-card">
+                      <span>Total do item</span>
+                      <strong>{formatCurrency(selectedItem.totalAmount)}</strong>
+                      <small>
+                        {selectedItem.quantity} x {formatCurrency(selectedItem.unitPrice)}
+                      </small>
+                    </div>
+                  </div>
+
+                  <div className="item-focus-actions">
+                    <button type="button" className="item-ghost-button" onClick={focusProductSearch}>
+                      Buscar outro item
+                    </button>
+                    <button type="button" className="item-danger-button" onClick={() => removeItem(selectedItem.productId)}>
+                      Remover item (F6)
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="empty-focus-state">
+                  <strong>Painel pronto para edicao rapida</strong>
+                  <span>Quando um item entrar na venda, este bloco mostra codigo, unidade, quantidade e valor sem depender de uma grade interativa.</span>
+                </div>
+              )}
             </Card>
 
             <div className="summary-grid">

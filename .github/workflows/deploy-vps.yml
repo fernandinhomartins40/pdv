@@ -34,6 +34,43 @@ jobs:
             APP_DIR="/root/revendeo"
             REPO_URL="https://github.com/fernandinhomartins40/pdv.git"
 
+            normalize_apt_sources() {
+              local file
+              local tmp
+
+              shopt -s nullglob
+
+              for file in /etc/apt/sources.list /etc/apt/sources.list.d/*.list; do
+                [ -f "${file}" ] || continue
+
+                tmp="$(mktemp)"
+
+                awk '
+                  /^[[:space:]]*#/ || /^[[:space:]]*$/ {
+                    print
+                    next
+                  }
+                  {
+                    key = $0
+                    gsub(/[[:space:]]+/, " ", key)
+                    sub(/^ /, "", key)
+                    sub(/ $/, "", key)
+                  }
+                  !seen[key]++ { print }
+                ' "${file}" > "${tmp}"
+
+                if ! cmp -s "${file}" "${tmp}"; then
+                  echo "Normalizando entradas APT duplicadas em ${file}"
+                  mv "${tmp}" "${file}"
+                else
+                  rm -f "${tmp}"
+                fi
+              done
+
+              shopt -u nullglob
+            }
+
+            normalize_apt_sources
             apt-get update -y
             apt-get install -y git curl ca-certificates
 
@@ -58,34 +95,14 @@ jobs:
             git reset --hard origin/main
             git clean -fdx -e .env.production -e .env.production.backup
 
-            if [ -f ".env.production" ]; then
-              cp .env.production .env.production.backup
-            fi
-
-            if [ -n "${DATABASE_URL}" ]; then
-              {
-                printf '%s\n' "NODE_ENV=production"
-                printf '%s\n' "NEXT_TELEMETRY_DISABLED=1"
-                printf '%s\n' "DATABASE_URL=${DATABASE_URL}"
-                printf '%s\n' "NEXT_PUBLIC_APP_URL=https://revendeo.com.br"
-                printf '%s\n' "NEXT_PUBLIC_API_URL=https://revendeo.com.br/v1"
-                printf '%s\n' "PRIMARY_DOMAIN=revendeo.com.br"
-                printf '%s\n' "SECONDARY_DOMAIN=www.revendeo.com.br"
-                printf '%s\n' "WEB_PORT=3040"
-                printf '%s\n' "API_PORT=3041"
-              } > .env.production
-            elif [ ! -f ".env.production" ]; then
-              echo "DATABASE_URL nao foi informado nas secrets e .env.production nao existe na VPS."
-              exit 1
-            fi
-
-            chmod +x scripts/deploy-vps.sh
+            chmod +x scripts/install-vps.sh scripts/deploy-vps.sh
             PRIMARY_DOMAIN=revendeo.com.br \
             SECONDARY_DOMAIN=www.revendeo.com.br \
             WEB_PORT=3040 \
             API_PORT=3041 \
+            DATABASE_URL="${DATABASE_URL}" \
             LETSENCRYPT_EMAIL="${LETSENCRYPT_EMAIL}" \
-            bash scripts/deploy-vps.sh
+            bash scripts/install-vps.sh
 
       - name: Verify deployment
         if: success()
