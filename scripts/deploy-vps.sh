@@ -192,10 +192,10 @@ build_apps() {
   cd "${APP_DIR}"
 
   if [[ -f "${APP_DIR}/pnpm-lock.yaml" ]]; then
-    pnpm install --frozen-lockfile
+    SKIP_DESKTOP_POSTINSTALL=1 pnpm install --frozen-lockfile --prod=false
   else
     log "pnpm-lock.yaml ausente; instalando sem frozen-lockfile"
-    pnpm install --no-frozen-lockfile
+    SKIP_DESKTOP_POSTINSTALL=1 pnpm install --no-frozen-lockfile --prod=false
   fi
 
   log "Gerando cliente Prisma"

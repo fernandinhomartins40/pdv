@@ -4,7 +4,7 @@
   "private": true,
   "main": "dist-electron/main.js",
   "scripts": {
-    "postinstall": "electron-builder install-app-deps",
+    "postinstall": "node -e \"const { spawnSync } = require('node:child_process'); if (process.env.SKIP_DESKTOP_POSTINSTALL === '1') process.exit(0); const result = spawnSync('electron-builder', ['install-app-deps'], { stdio: 'inherit', shell: true }); process.exit(result.status ?? 1);\"",
     "dev": "concurrently -k \"pnpm dev:renderer\" \"pnpm dev:electron:build\" \"pnpm dev:electron:start\"",
     "dev:renderer": "vite",
     "dev:electron:build": "tsup electron/main.ts electron/preload.ts --format cjs --watch --out-dir dist-electron --external electron --external better-sqlite3",
