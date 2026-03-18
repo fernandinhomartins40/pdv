@@ -14,6 +14,20 @@ log() {
   printf '\n==> %s\n' "$1"
 }
 
+disable_redundant_ubuntu_mirror_file() {
+  local mirrors_file="/etc/apt/sources.list.d/ubuntu-mirrors.list"
+  local disabled_file="${mirrors_file}.disabled-by-revendeo"
+
+  if [[ ! -f "${mirrors_file}" ]]; then
+    return
+  fi
+
+  if [[ -f /etc/apt/sources.list ]] && grep -Eq 'archive\.ubuntu\.com/ubuntu|security\.ubuntu\.com/ubuntu' /etc/apt/sources.list; then
+    log "Desativando ${mirrors_file} porque /etc/apt/sources.list ja cobre os repositorios Ubuntu"
+    mv "${mirrors_file}" "${disabled_file}"
+  fi
+}
+
 repair_ubuntu_mirrors() {
   local file
   local tmp
@@ -100,6 +114,7 @@ require_root() {
 
 ensure_base_packages() {
   log "Instalando dependencias de sistema"
+  disable_redundant_ubuntu_mirror_file
   normalize_apt_sources
   apt_update_with_recovery
   apt-get install -y curl ca-certificates git nginx
