@@ -1,0 +1,15 @@
+node_modules
+.turbo
+.next
+dist
+dist-electron
+coverage
+pnpm-lock.yaml
+*.log
+.env
+.env.local
+.DS_Store
+apps/desktop/data
+apps/desktop/release
+packages/database/generated
+*.tsbuildinfo

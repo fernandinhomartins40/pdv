@@ -1,0 +1,98 @@
+name: Deploy Revendeo to VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@master
+        env:
+          GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          LETSENCRYPT_EMAIL: ${{ secrets.LETSENCRYPT_EMAIL }}
+        with:
+          host: revendeo.com.br
+          username: root
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: 22
+          timeout: 45m
+          command_timeout: 45m
+          envs: GIT_TOKEN,DATABASE_URL,LETSENCRYPT_EMAIL
+          script: |
+            set -euo pipefail
+
+            APP_DIR="/root/revendeo"
+            REPO_URL="https://github.com/fernandinhomartins40/pdv.git"
+
+            apt-get update -y
+            apt-get install -y git curl ca-certificates
+
+            if [ ! -d "${APP_DIR}/.git" ]; then
+              if [ -n "${GIT_TOKEN}" ]; then
+                git clone "https://${GIT_TOKEN}@github.com/fernandinhomartins40/pdv.git" "${APP_DIR}"
+              else
+                git clone "${REPO_URL}" "${APP_DIR}"
+              fi
+            fi
+
+            cd "${APP_DIR}"
+
+            if [ -n "${GIT_TOKEN}" ]; then
+              git remote set-url origin "https://${GIT_TOKEN}@github.com/fernandinhomartins40/pdv.git"
+            else
+              git remote set-url origin "${REPO_URL}"
+            fi
+
+            git fetch origin main --prune
+            git checkout main || git checkout -b main origin/main
+            git reset --hard origin/main
+            git clean -fdx -e .env.production -e .env.production.backup
+
+            if [ -f ".env.production" ]; then
+              cp .env.production .env.production.backup
+            fi
+
+            if [ -n "${DATABASE_URL}" ]; then
+              {
+                printf '%s\n' "NODE_ENV=production"
+                printf '%s\n' "NEXT_TELEMETRY_DISABLED=1"
+                printf '%s\n' "DATABASE_URL=${DATABASE_URL}"
+                printf '%s\n' "NEXT_PUBLIC_APP_URL=https://revendeo.com.br"
+                printf '%s\n' "NEXT_PUBLIC_API_URL=https://revendeo.com.br/v1"
+                printf '%s\n' "PRIMARY_DOMAIN=revendeo.com.br"
+                printf '%s\n' "SECONDARY_DOMAIN=www.revendeo.com.br"
+                printf '%s\n' "WEB_PORT=3040"
+                printf '%s\n' "API_PORT=3041"
+              } > .env.production
+            elif [ ! -f ".env.production" ]; then
+              echo "DATABASE_URL nao foi informado nas secrets e .env.production nao existe na VPS."
+              exit 1
+            fi
+
+            chmod +x scripts/deploy-vps.sh
+            PRIMARY_DOMAIN=revendeo.com.br \
+            SECONDARY_DOMAIN=www.revendeo.com.br \
+            WEB_PORT=3040 \
+            API_PORT=3041 \
+            LETSENCRYPT_EMAIL="${LETSENCRYPT_EMAIL}" \
+            bash scripts/deploy-vps.sh
+
+      - name: Verify deployment
+        if: success()
+        run: |
+          echo "Deploy concluido com sucesso"
+          echo "Painel: revendeo.com.br"
+          echo "Painel alternativo: www.revendeo.com.br"
+          echo "API: revendeo.com.br/v1"
+          echo "Health check: revendeo.com.br/health"
+          echo "HTTPS sera configurado automaticamente se LETSENCRYPT_EMAIL estiver definido."

@@ -1,0 +1,72 @@
+{
+  "name": "@pdv/desktop",
+  "version": "0.2.8",
+  "private": true,
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "postinstall": "electron-builder install-app-deps",
+    "dev": "concurrently -k \"pnpm dev:renderer\" \"pnpm dev:electron:build\" \"pnpm dev:electron:start\"",
+    "dev:renderer": "vite",
+    "dev:electron:build": "tsup electron/main.ts electron/preload.ts --format cjs --watch --out-dir dist-electron --external electron --external better-sqlite3",
+    "dev:electron:start": "cross-env-shell VITE_DEV_SERVER_URL=http://localhost:5173 \"wait-on tcp:5173 dist-electron/main.js && electron dist-electron/main.js\"",
+    "build": "vite build && tsup electron/main.ts electron/preload.ts --format cjs --out-dir dist-electron --external electron --external better-sqlite3",
+    "dist:dir": "pnpm build && electron-builder --win --dir --publish never",
+    "dist:win": "pnpm build && electron-builder --win nsis --publish never",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "scheduler": "^0.23.2"
+  },
+  "devDependencies": {
+    "@pdv/database": "workspace:*",
+    "@pdv/types": "workspace:*",
+    "@pdv/ui": "workspace:*",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.13.10",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.12",
+    "lucide-react": "^0.476.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.1",
+    "wait-on": "^8.0.2"
+  },
+  "build": {
+    "appId": "br.com.pdv.desktop",
+    "productName": "PDV Desktop",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "PDV Desktop"
+    }
+  }
+}

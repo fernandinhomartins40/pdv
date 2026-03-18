@@ -1,0 +1,20 @@
+{
+  "name": "pdv-platform",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "db:generate": "pnpm --filter @pdv/database prisma:generate",
+    "db:migrate": "pnpm --filter @pdv/database prisma:migrate",
+    "db:deploy": "pnpm --filter @pdv/database prisma:deploy",
+    "db:push": "pnpm --filter @pdv/database prisma:push"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0",
+    "typescript": "^5.8.2"
+  }
+}
