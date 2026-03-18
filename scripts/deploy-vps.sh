@@ -150,6 +150,8 @@ ensure_env_file() {
 }
 
 ensure_local_postgres() {
+  local original_dir
+
   if [[ "${LOCAL_POSTGRES_ENABLED:-0}" != "1" ]]; then
     return
   fi
@@ -158,6 +160,9 @@ ensure_local_postgres() {
   apt-get install -y postgresql
   systemctl enable postgresql
   systemctl start postgresql
+
+  original_dir="$(pwd)"
+  cd /tmp
 
   if ! runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${LOCAL_POSTGRES_USER}'" | grep -q 1; then
     runuser -u postgres -- psql -c "CREATE ROLE ${LOCAL_POSTGRES_USER} LOGIN PASSWORD '${LOCAL_POSTGRES_PASSWORD}'"
@@ -168,6 +173,8 @@ ensure_local_postgres() {
   if ! runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_database WHERE datname='${LOCAL_POSTGRES_DB}'" | grep -q 1; then
     runuser -u postgres -- createdb -O "${LOCAL_POSTGRES_USER}" "${LOCAL_POSTGRES_DB}"
   fi
+
+  cd "${original_dir}"
 }
 
 apply_database_schema() {
@@ -183,7 +190,13 @@ apply_database_schema() {
 build_apps() {
   log "Instalando dependencias do monorepo"
   cd "${APP_DIR}"
-  pnpm install --frozen-lockfile
+
+  if [[ -f "${APP_DIR}/pnpm-lock.yaml" ]]; then
+    pnpm install --frozen-lockfile
+  else
+    log "pnpm-lock.yaml ausente; instalando sem frozen-lockfile"
+    pnpm install --no-frozen-lockfile
+  fi
 
   log "Gerando cliente Prisma"
   pnpm db:generate
