@@ -241,6 +241,10 @@ build_apps() {
 
   apply_database_schema
 
+  log "Build dos pacotes compartilhados"
+  pnpm --filter @pdv/types build
+  pnpm --filter @pdv/database build
+
   log "Build da API"
   pnpm --filter @pdv/api build
 
