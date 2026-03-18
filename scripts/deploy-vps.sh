@@ -221,8 +221,8 @@ apply_database_schema() {
     log "Aplicando migrations versionadas do Prisma"
     pnpm db:deploy
   else
-    log "Nenhuma migration versionada encontrada; aplicando schema atual com prisma db push"
-    pnpm db:push
+    log "Nenhuma migration versionada encontrada; aplicando schema atual com prisma db push --accept-data-loss"
+    pnpm --filter @pdv/database exec prisma db push --schema prisma/schema.prisma --accept-data-loss
   fi
 }
 
