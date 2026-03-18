@@ -4,6 +4,7 @@ set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${APP_DIR}/.env.production"
+BACKUP_ENV_FILE="${ENV_FILE}.backup"
 PRIMARY_DOMAIN="${PRIMARY_DOMAIN:-revendeo.com.br}"
 SECONDARY_DOMAIN="${SECONDARY_DOMAIN:-www.revendeo.com.br}"
 WEB_PORT="${WEB_PORT:-3040}"
@@ -24,7 +25,7 @@ write_env_file() {
   log "Preparando .env.production"
 
   if [[ -f "${ENV_FILE}" ]]; then
-    cp "${ENV_FILE}" "${ENV_FILE}.backup"
+    cp "${ENV_FILE}" "${BACKUP_ENV_FILE}"
   fi
 
   if [[ -n "${DATABASE_URL:-}" ]]; then
@@ -42,10 +43,20 @@ write_env_file() {
     return
   fi
 
-  if [[ ! -f "${ENV_FILE}" ]]; then
-    echo "DATABASE_URL nao foi informado e ${ENV_FILE} nao existe."
-    exit 1
+  if [[ -f "${ENV_FILE}" ]]; then
+    log "DATABASE_URL nao informado; reutilizando ${ENV_FILE}"
+    return
   fi
+
+  if [[ -f "${BACKUP_ENV_FILE}" ]]; then
+    log "DATABASE_URL nao informado; restaurando ${BACKUP_ENV_FILE}"
+    cp "${BACKUP_ENV_FILE}" "${ENV_FILE}"
+    return
+  fi
+
+  echo "DATABASE_URL nao foi informado nas GitHub Secrets e ${ENV_FILE} nao existe na VPS."
+  echo "Configure a secret DATABASE_URL ou mantenha ${BACKUP_ENV_FILE} persistido no servidor."
+  exit 1
 }
 
 run_deploy() {
