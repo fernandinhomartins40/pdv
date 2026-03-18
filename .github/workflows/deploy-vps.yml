@@ -34,6 +34,33 @@ jobs:
             APP_DIR="/root/revendeo"
             REPO_URL="https://github.com/fernandinhomartins40/pdv.git"
 
+            repair_ubuntu_mirrors() {
+              local file
+              local tmp
+
+              shopt -s nullglob
+
+              for file in /etc/apt/sources.list /etc/apt/sources.list.d/*.list; do
+                [ -f "${file}" ] || continue
+
+                if ! grep -Eq 'mirror\.ufam\.edu\.br/ubuntu' "${file}"; then
+                  continue
+                fi
+
+                tmp="$(mktemp)"
+                sed -E 's#https?://mirror\.ufam\.edu\.br/ubuntu#http://archive.ubuntu.com/ubuntu#g' "${file}" > "${tmp}"
+
+                if ! cmp -s "${file}" "${tmp}"; then
+                  echo "Substituindo mirror Ubuntu invalido em ${file}"
+                  mv "${tmp}" "${file}"
+                else
+                  rm -f "${tmp}"
+                fi
+              done
+
+              shopt -u nullglob
+            }
+
             normalize_apt_sources() {
               local file
               local tmp
@@ -70,25 +97,33 @@ jobs:
               shopt -u nullglob
             }
 
+            apt_update_with_recovery() {
+              if apt-get update -y; then
+                return
+              fi
+
+              echo "apt-get update falhou; aplicando fallback para mirrors oficiais do Ubuntu"
+              repair_ubuntu_mirrors
+              normalize_apt_sources
+              apt-get update -y
+            }
+
             normalize_apt_sources
-            apt-get update -y
+            apt_update_with_recovery
             apt-get install -y git curl ca-certificates
 
+            if [ -z "${GIT_TOKEN}" ]; then
+              echo "GIT_TOKEN secret e obrigatorio porque o repositorio e privado."
+              exit 1
+            fi
+
             if [ ! -d "${APP_DIR}/.git" ]; then
-              if [ -n "${GIT_TOKEN}" ]; then
-                git clone "https://${GIT_TOKEN}@github.com/fernandinhomartins40/pdv.git" "${APP_DIR}"
-              else
-                git clone "${REPO_URL}" "${APP_DIR}"
-              fi
+              git clone "https://${GIT_TOKEN}@github.com/fernandinhomartins40/pdv.git" "${APP_DIR}"
             fi
 
             cd "${APP_DIR}"
 
-            if [ -n "${GIT_TOKEN}" ]; then
-              git remote set-url origin "https://${GIT_TOKEN}@github.com/fernandinhomartins40/pdv.git"
-            else
-              git remote set-url origin "${REPO_URL}"
-            fi
+            git remote set-url origin "https://${GIT_TOKEN}@github.com/fernandinhomartins40/pdv.git"
 
             git fetch origin main --prune
             git checkout main || git checkout -b main origin/main

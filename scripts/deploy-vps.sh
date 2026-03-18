@@ -14,6 +14,33 @@ log() {
   printf '\n==> %s\n' "$1"
 }
 
+repair_ubuntu_mirrors() {
+  local file
+  local tmp
+
+  shopt -s nullglob
+
+  for file in /etc/apt/sources.list /etc/apt/sources.list.d/*.list; do
+    [[ -f "${file}" ]] || continue
+
+    if ! grep -Eq 'mirror\.ufam\.edu\.br/ubuntu' "${file}"; then
+      continue
+    fi
+
+    tmp="$(mktemp)"
+    sed -E 's#https?://mirror\.ufam\.edu\.br/ubuntu#http://archive.ubuntu.com/ubuntu#g' "${file}" >"${tmp}"
+
+    if ! cmp -s "${file}" "${tmp}"; then
+      log "Substituindo mirror Ubuntu invalido em ${file}"
+      mv "${tmp}" "${file}"
+    else
+      rm -f "${tmp}"
+    fi
+  done
+
+  shopt -u nullglob
+}
+
 normalize_apt_sources() {
   local file
   local tmp
@@ -50,6 +77,17 @@ normalize_apt_sources() {
   shopt -u nullglob
 }
 
+apt_update_with_recovery() {
+  if apt-get update -y; then
+    return
+  fi
+
+  log "apt-get update falhou; aplicando fallback para mirrors oficiais do Ubuntu"
+  repair_ubuntu_mirrors
+  normalize_apt_sources
+  apt-get update -y
+}
+
 require_root() {
   if [[ "$(id -u)" -ne 0 ]]; then
     echo "Este script precisa ser executado como root."
@@ -60,7 +98,7 @@ require_root() {
 ensure_base_packages() {
   log "Instalando dependencias de sistema"
   normalize_apt_sources
-  apt-get update -y
+  apt_update_with_recovery
   apt-get install -y curl ca-certificates git nginx
 }
 
