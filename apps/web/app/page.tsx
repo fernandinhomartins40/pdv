@@ -1,106 +1,150 @@
 import Link from "next/link";
-import { ArrowRight, Building2, CloudCog, ShieldCheck, ShoppingBasket, Store } from "lucide-react";
+import { ArrowRight, Building2, CloudCog, Receipt, ShieldCheck, ShoppingBasket, Store } from "lucide-react";
 
 const highlights = [
   {
-    title: "Multiempresa de verdade",
-    description: "Um usuario pode operar varias empresas, lojas e caixas com contexto isolado por tenant."
+    title: "Vendas sem parar",
+    description: "O PDV continua operando mesmo sem internet e sincroniza assim que a conexao volta."
   },
   {
-    title: "PDV desktop offline-first",
-    description: "Vende localmente, sincroniza depois e mantem operacao mesmo quando a internet cai."
+    title: "Gestao centralizada",
+    description: "Produtos, estoque, caixa, usuarios, lojas e PDVs no mesmo backoffice."
   },
   {
-    title: "Painel cloud unico",
-    description: "Produtos, estoque, vendas, caixa e onboarding centralizados no mesmo backoffice."
+    title: "Escala sem improviso",
+    description: "Estrutura preparada para multiempresa, varias lojas e varios caixas por operacao."
   }
 ];
 
 const features = [
   {
     icon: Building2,
-    label: "Organizacoes, lojas e PDVs",
-    detail: "Estrutura pronta para matriz, filial, franquia e operacao com varios caixas."
+    label: "Multiempresa e multiunidade",
+    detail: "Controle filiais, franquias e grupos comerciais com isolamento por tenant."
+  },
+  {
+    icon: Store,
+    label: "Mais de um PDV por usuario",
+    detail: "Um mesmo operador ou gestor pode trocar de contexto entre lojas e terminais."
   },
   {
     icon: CloudCog,
-    label: "Sync bidirecional",
-    detail: "Desktop e nuvem trabalham com fila local, cursor e reconciliacao operacional."
+    label: "Cloud + desktop",
+    detail: "Painel web para gestao e aplicativo desktop para operacao de caixa offline-first."
   },
   {
     icon: ShieldCheck,
-    label: "Autenticacao e sessao",
-    detail: "Conta, sessoes persistidas, troca de contexto e recuperacao de senha."
+    label: "Autenticacao e contexto",
+    detail: "Login, sessao, troca de empresa, loja e PDV com base preparada para escalar com seguranca."
+  },
+  {
+    icon: Receipt,
+    label: "Fluxo de venda de varejo",
+    detail: "Catalogo, estoque, XML, pagamentos, caixa e consolidacao operacional no mesmo produto."
   },
   {
     icon: ShoppingBasket,
-    label: "Operacao de varejo",
-    detail: "Cadastro, estoque, vendas, XML e fluxo de caixa no mesmo produto."
+    label: "Operacao orientada a resultado",
+    detail: "Menos ruptura, mais controle de estoque e visao clara do que acontece na ponta."
   }
+];
+
+const results = [
+  { value: "99,9%", label: "continuidade operacional com sync assincrono" },
+  { value: "1 painel", label: "para governar lojas, caixas e equipes" },
+  { value: "0 planilhas", label: "para controlar estoque e contexto de operacao" }
 ];
 
 export default function LandingPage() {
   return (
     <main className="landing-shell">
-      <section className="landing-hero">
+      <header className="landing-nav">
+        <div className="landing-brand">
+          <span className="landing-brand-mark">R</span>
+          <div>
+            <strong>Revendeo</strong>
+            <span>SaaS de operacao comercial</span>
+          </div>
+        </div>
+        <nav className="landing-nav-links">
+          <a href="#produto">Produto</a>
+          <a href="#beneficios">Beneficios</a>
+          <a href="#cta-final">Acessar</a>
+        </nav>
+        <Link href="/login" className="landing-button nav">
+          Entrar
+        </Link>
+      </header>
+
+      <section className="landing-hero" id="produto">
         <div className="landing-copy">
-          <span className="landing-kicker">SaaS para operacao comercial e PDV</span>
-          <h1>Controle varias lojas e varios caixas sem quebrar a operacao da ponta.</h1>
+          <span className="landing-kicker">PDV desktop + painel cloud para varejo</span>
+          <h1>Venda na loja. Controle tudo na nuvem. Escale para varios PDVs sem perder o controle.</h1>
           <p>
-            Revendeo combina painel cloud multiusuario com PDV desktop offline-first, para quem precisa vender na loja e
-            governar a operacao inteira em um unico sistema.
+            Revendeo foi desenhado para empresas que precisam operar no caixa com rapidez e, ao mesmo tempo, manter
+            produtos, estoque, usuarios, lojas e resultados sob governanca central.
           </p>
           <div className="landing-actions">
-            <Link href="/registro" className="landing-button primary">
-              Criar ambiente
+            <Link href="/login" className="landing-button primary">
+              Entrar no painel
               <ArrowRight size={18} />
             </Link>
-            <Link href="/login" className="landing-button secondary">
-              Entrar no painel
+            <Link href="/registro" className="landing-button secondary">
+              Criar ambiente
             </Link>
           </div>
           <div className="landing-proof">
+            <span>Offline-first</span>
             <span>Multiempresa</span>
             <span>Multi-PDV</span>
-            <span>Cloud + Desktop</span>
+            <span>Painel cloud</span>
           </div>
         </div>
 
         <div className="landing-panel">
           <div className="hero-card hero-card-large">
-            <strong>Operacao ativa</strong>
+            <strong>O que o produto resolve</strong>
             <div className="hero-grid">
               <div>
-                <span>Empresas</span>
-                <strong>12</strong>
+                <span>Gestao</span>
+                <strong>Lojas e equipes</strong>
               </div>
               <div>
-                <span>Lojas</span>
-                <strong>31</strong>
+                <span>Operacao</span>
+                <strong>Caixa com continuidade</strong>
               </div>
               <div>
-                <span>PDVs</span>
-                <strong>86</strong>
+                <span>Controle</span>
+                <strong>Estoque e XML</strong>
               </div>
               <div>
-                <span>Sync</span>
-                <strong>99.94%</strong>
+                <span>Escala</span>
+                <strong>Mais caixas sem retrabalho</strong>
               </div>
             </div>
           </div>
 
           <div className="hero-card hero-card-stack">
             <div>
-              <span className="muted-note">Fluxo recomendado</span>
-              <strong>Conta → Empresa → Loja → PDV</strong>
+              <span className="muted-note">Fluxo comercial</span>
+              <strong>Conta -&gt; Empresa -&gt; Loja -&gt; PDV -&gt; Venda</strong>
             </div>
             <div className="hero-chip-row">
-              <span className="hero-chip">Onboarding guiado</span>
-              <span className="hero-chip">Sessao segura</span>
-              <span className="hero-chip">Escala por tenant</span>
+              <span className="hero-chip">Sync bidirecional</span>
+              <span className="hero-chip">Contexto por tenant</span>
+              <span className="hero-chip">Acesso web e desktop</span>
             </div>
           </div>
         </div>
+      </section>
+
+      <section className="landing-results">
+        {results.map((result) => (
+          <article key={result.value} className="landing-result-card">
+            <strong>{result.value}</strong>
+            <span>{result.label}</span>
+          </article>
+        ))}
       </section>
 
       <section className="landing-strip">
@@ -112,10 +156,10 @@ export default function LandingPage() {
         ))}
       </section>
 
-      <section className="landing-features">
+      <section className="landing-features" id="beneficios">
         <div className="landing-section-head">
-          <span className="landing-kicker">Base de produto</span>
-          <h2>O sistema ja nasce pensando em tenant, loja e terminal.</h2>
+          <span className="landing-kicker">Por que escolher</span>
+          <h2>Um produto pensado para vender melhor e operar com menos atrito.</h2>
         </div>
 
         <div className="feature-grid">
@@ -133,14 +177,19 @@ export default function LandingPage() {
           })}
         </div>
 
-        <div className="landing-cta-card">
+        <div className="landing-cta-card" id="cta-final">
           <div>
-            <span className="landing-kicker">Primeiro passo</span>
-            <h3>Crie agora sua conta, a primeira loja e o primeiro caixa.</h3>
+            <span className="landing-kicker">Comece agora</span>
+            <h3>Acesse sua conta ou crie seu ambiente comercial em poucos minutos.</h3>
           </div>
-          <Link href="/registro" className="landing-button primary">
-            Iniciar onboarding
-          </Link>
+          <div className="landing-actions">
+            <Link href="/login" className="landing-button primary">
+              Ir para login
+            </Link>
+            <Link href="/registro" className="landing-button secondary dark">
+              Criar conta
+            </Link>
+          </div>
         </div>
       </section>
     </main>
