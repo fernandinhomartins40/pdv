@@ -14,6 +14,44 @@ log() {
   printf '\n==> %s\n' "$1"
 }
 
+dump_service_diagnostics() {
+  local service_name="$1"
+
+  echo
+  echo "---- systemctl status: ${service_name} ----"
+  systemctl --no-pager --full status "${service_name}" || true
+  echo
+  echo "---- journalctl: ${service_name} ----"
+  journalctl -u "${service_name}" --no-pager -n 120 || true
+  echo
+}
+
+wait_for_http() {
+  local name="$1"
+  local url="$2"
+  local service_name="$3"
+  local max_attempts="${4:-30}"
+  local attempt
+
+  for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+    if curl --fail --silent --show-error "${url}" >/dev/null; then
+      return
+    fi
+
+    if ! systemctl is-active --quiet "${service_name}"; then
+      dump_service_diagnostics "${service_name}"
+      echo "${name} nao ficou ativo."
+      exit 1
+    fi
+
+    sleep 2
+  done
+
+  dump_service_diagnostics "${service_name}"
+  echo "Timeout aguardando ${name} responder em ${url}."
+  exit 1
+}
+
 disable_redundant_ubuntu_mirror_file() {
   local mirrors_file="/etc/apt/sources.list.d/ubuntu-mirrors.list"
   local disabled_file="${mirrors_file}.disabled-by-revendeo"
@@ -334,10 +372,10 @@ configure_tls() {
 
 run_healthchecks() {
   log "Validando API"
-  curl --fail --silent "http://127.0.0.1:${API_PORT}/health" >/dev/null
+  wait_for_http "API" "http://127.0.0.1:${API_PORT}/health" "revendeo-api.service" 30
 
   log "Validando painel web"
-  curl --fail --silent --head "http://127.0.0.1:${WEB_PORT}" >/dev/null
+  wait_for_http "painel web" "http://127.0.0.1:${WEB_PORT}" "revendeo-web.service" 30
 }
 
 main() {
