@@ -1,2 +1,2 @@
-export * from "./client.js";
-export * from "./local-sqlite.js";
+export * from "./client";
+export * from "./local-sqlite";

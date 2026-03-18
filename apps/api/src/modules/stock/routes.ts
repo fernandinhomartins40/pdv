@@ -3,20 +3,24 @@ import { MovementType } from "@prisma/client";
 import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import { mapProduct } from "../../lib/mappers";
+import { assertOrganizationAccess, assertStoreAccess } from "../../lib/auth";
 
 export async function stockRoutes(app: FastifyInstance) {
   app.get("/stock/balance", async (request) => {
     const query = z
       .object({
-        organizationId: z.string(),
-        storeId: z.string(),
+        organizationId: z.string().optional(),
+        storeId: z.string().optional(),
         search: z.string().optional()
       })
       .parse(request.query);
 
+    const organizationId = assertOrganizationAccess(request, query.organizationId);
+    const storeId = assertStoreAccess(request, organizationId, query.storeId);
+
     const balances = await prisma.product.findMany({
       where: {
-        organizationId: query.organizationId,
+        organizationId,
         isActive: true,
         OR: query.search
           ? [
@@ -28,7 +32,7 @@ export async function stockRoutes(app: FastifyInstance) {
       include: {
         stockBalances: {
           where: {
-            storeId: query.storeId
+            storeId: storeId ?? undefined
           }
         }
       }
@@ -42,25 +46,28 @@ export async function stockRoutes(app: FastifyInstance) {
   app.get("/stock/alerts", async (request) => {
     const query = z
       .object({
-        organizationId: z.string(),
-        storeId: z.string()
+        organizationId: z.string().optional(),
+        storeId: z.string().optional()
       })
       .parse(request.query);
 
+    const organizationId = assertOrganizationAccess(request, query.organizationId);
+    const storeId = assertStoreAccess(request, organizationId, query.storeId);
+
     const alerts = await prisma.product.findMany({
       where: {
-        organizationId: query.organizationId,
+        organizationId,
         isActive: true,
         stockBalances: {
           some: {
-            storeId: query.storeId
+            storeId: storeId ?? undefined
           }
         }
       },
       include: {
         stockBalances: {
           where: {
-            storeId: query.storeId
+            storeId: storeId ?? undefined
           }
         }
       }
@@ -84,7 +91,8 @@ export async function stockRoutes(app: FastifyInstance) {
   app.post("/stock/adjustments", async (request, reply) => {
     const body = z
       .object({
-        storeId: z.string(),
+        organizationId: z.string().optional(),
+        storeId: z.string().optional(),
         productId: z.string(),
         quantity: z.number(),
         reason: z.string().min(2),
@@ -92,10 +100,17 @@ export async function stockRoutes(app: FastifyInstance) {
       })
       .parse(request.body);
 
+    const organizationId = assertOrganizationAccess(request, body.organizationId);
+    const storeId = assertStoreAccess(request, organizationId, body.storeId);
+
+    if (!storeId) {
+      return reply.code(400).send({ message: "Selecione uma loja ativa para ajustar estoque." });
+    }
+
     const balance = await prisma.stockBalance.upsert({
       where: {
         storeId_productId: {
-          storeId: body.storeId,
+          storeId,
           productId: body.productId
         }
       },
@@ -105,7 +120,7 @@ export async function stockRoutes(app: FastifyInstance) {
         }
       },
       create: {
-        storeId: body.storeId,
+        storeId,
         productId: body.productId,
         quantity: body.quantity
       }
@@ -113,7 +128,7 @@ export async function stockRoutes(app: FastifyInstance) {
 
     await prisma.stockMovement.create({
       data: {
-        storeId: body.storeId,
+        storeId,
         productId: body.productId,
         quantity: body.quantity,
         reason: body.reason,

@@ -5,6 +5,7 @@ import type { FastifyInstance } from "fastify";
 import type { SyncConflict } from "@pdv/types";
 import { mapProduct } from "../../lib/mappers";
 import { ensureOperationalContext } from "../../lib/operational-context";
+import { assertOrganizationAccess, assertStoreAccess } from "../../lib/auth";
 
 const syncOperationSchema = z.object({
   id: z.string(),
@@ -368,15 +369,37 @@ export async function syncRoutes(app: FastifyInstance) {
   app.post("/sync/push", async (request) => {
     const body = z
       .object({
-        organizationId: z.string(),
-        storeId: z.string(),
+        organizationId: z.string().optional(),
+        storeId: z.string().optional(),
         operations: z.array(syncOperationSchema)
       })
       .parse(request.body);
 
+    const organizationId = assertOrganizationAccess(request, body.organizationId);
+    const storeId = assertStoreAccess(request, organizationId, body.storeId);
+
+    if (!storeId) {
+      return {
+        processedIds: [],
+        conflicts: [
+          {
+            queueId: "context",
+            entity: "cash_session",
+            localVersion: 0,
+            remoteVersion: 0,
+            reason: "Nenhuma loja ativa vinculada a esta sessao."
+          }
+        ],
+        nextRetryAt: new Date(Date.now() + 30000).toISOString()
+      };
+    }
+
     await ensureOperationalContext({
-      organizationId: body.organizationId,
-      storeId: body.storeId
+      organizationId,
+      storeId,
+      operatorId: request.auth.context.user.id,
+      operatorName: request.auth.context.user.name,
+      operatorEmail: request.auth.context.user.email
     });
 
     const processedIds: string[] = [];
@@ -402,6 +425,10 @@ export async function syncRoutes(app: FastifyInstance) {
               version: z.number()
             })
             .parse(operation.payload);
+
+          if (payload.organizationId !== organizationId) {
+            throw new Error("Produto fora da organizacao ativa da sessao.");
+          }
 
           const remote = await prisma.product.findUnique({
             where: {
@@ -469,7 +496,7 @@ export async function syncRoutes(app: FastifyInstance) {
           await prisma.stockBalance.upsert({
             where: {
               storeId_productId: {
-                storeId: body.storeId,
+                storeId,
                 productId: payload.productId
               }
             },
@@ -477,7 +504,7 @@ export async function syncRoutes(app: FastifyInstance) {
               quantity: payload.quantity
             },
             create: {
-              storeId: body.storeId,
+              storeId,
               productId: payload.productId,
               quantity: payload.quantity
             }
@@ -524,15 +551,29 @@ export async function syncRoutes(app: FastifyInstance) {
   app.get("/sync/pull", async (request) => {
     const query = z
       .object({
-        organizationId: z.string(),
-        storeId: z.string(),
+        organizationId: z.string().optional(),
+        storeId: z.string().optional(),
         cursor: z.string().optional()
       })
       .parse(request.query);
 
+    const organizationId = assertOrganizationAccess(request, query.organizationId);
+    const storeId = assertStoreAccess(request, organizationId, query.storeId);
+
+    if (!storeId) {
+      return {
+        cursor: new Date().toISOString(),
+        products: [],
+        stock: []
+      };
+    }
+
     await ensureOperationalContext({
-      organizationId: query.organizationId,
-      storeId: query.storeId
+      organizationId,
+      storeId,
+      operatorId: request.auth.context.user.id,
+      operatorName: request.auth.context.user.name,
+      operatorEmail: request.auth.context.user.email
     });
 
     const since = query.cursor ? new Date(query.cursor) : new Date(0);
@@ -541,7 +582,7 @@ export async function syncRoutes(app: FastifyInstance) {
     const [products, stock] = await Promise.all([
       prisma.product.findMany({
         where: {
-          organizationId: query.organizationId,
+          organizationId,
           updatedAt: {
             gt: since
           }
@@ -549,14 +590,14 @@ export async function syncRoutes(app: FastifyInstance) {
         include: {
           stockBalances: {
             where: {
-              storeId: query.storeId
+              storeId
             }
           }
         }
       }),
       prisma.stockBalance.findMany({
         where: {
-          storeId: query.storeId,
+          storeId,
           updatedAt: {
             gt: since
           }
@@ -566,15 +607,15 @@ export async function syncRoutes(app: FastifyInstance) {
 
     await prisma.syncCursor.upsert({
       where: {
-        id: `${query.organizationId}:${query.storeId}:desktop`
+        id: `${organizationId}:${storeId}:desktop`
       },
       update: {
         cursor: nextCursor
       },
       create: {
-        id: `${query.organizationId}:${query.storeId}:desktop`,
-        organizationId: query.organizationId,
-        storeId: query.storeId,
+        id: `${organizationId}:${storeId}:desktop`,
+        organizationId,
+        storeId,
         scope: "desktop",
         cursor: nextCursor
       }

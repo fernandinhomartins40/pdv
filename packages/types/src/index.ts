@@ -32,7 +32,74 @@ export interface UserIdentity {
   id: string;
   email: string;
   name: string;
-  role: "ADMIN" | "CASHIER" | "MANAGER";
+  role: "OWNER" | "ADMIN" | "CASHIER" | "MANAGER" | "FINANCE" | "SUPPORT";
+}
+
+export interface OrganizationSummary {
+  id: string;
+  name: string;
+  slug: string;
+  role: UserIdentity["role"];
+}
+
+export interface StoreSummary {
+  id: string;
+  organizationId: string;
+  name: string;
+  code: string;
+  role: UserIdentity["role"];
+}
+
+export interface TerminalSummary {
+  id: string;
+  organizationId: string;
+  storeId: string;
+  name: string;
+  code: string;
+  isActive: boolean;
+}
+
+export interface AuthSessionSummary {
+  token: string;
+  expiresAt: string;
+}
+
+export interface AuthContext {
+  user: UserIdentity;
+  organizations: OrganizationSummary[];
+  stores: StoreSummary[];
+  terminals: TerminalSummary[];
+  activeOrganizationId: string;
+  activeStoreId?: string | null;
+  activeTerminalId?: string | null;
+  session: AuthSessionSummary;
+  emailVerified: boolean;
+}
+
+export interface RegisterAccountInput {
+  name: string;
+  email: string;
+  password: string;
+  organizationName: string;
+  organizationSlug?: string;
+  storeName: string;
+  storeCode?: string;
+  terminalName: string;
+  terminalCode?: string;
+}
+
+export interface LoginInput {
+  email: string;
+  password: string;
+  organizationId?: string;
+  storeId?: string;
+  terminalId?: string;
+}
+
+export interface SwitchContextInput {
+  organizationId: string;
+  storeId?: string;
+  terminalId?: string;
 }
 
 export interface Product {

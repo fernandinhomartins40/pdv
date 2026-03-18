@@ -2,9 +2,10 @@ import { prisma } from "@pdv/database";
 import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import { mapProduct } from "../../lib/mappers";
+import { assertOrganizationAccess, assertStoreAccess } from "../../lib/auth";
 
 const createProductSchema = z.object({
-  organizationId: z.string(),
+  organizationId: z.string().optional(),
   sku: z.string().min(1),
   barcode: z.string().optional().nullable(),
   name: z.string().min(2),
@@ -22,15 +23,18 @@ export async function productRoutes(app: FastifyInstance) {
   app.get("/products", async (request) => {
     const query = z
       .object({
-        organizationId: z.string(),
+        organizationId: z.string().optional(),
         storeId: z.string().optional(),
         search: z.string().optional()
       })
       .parse(request.query);
 
+    const organizationId = assertOrganizationAccess(request, query.organizationId);
+    const storeId = assertStoreAccess(request, organizationId, query.storeId);
+
     const products = await prisma.product.findMany({
       where: {
-        organizationId: query.organizationId,
+        organizationId,
         isActive: true,
         OR: query.search
           ? [
@@ -41,10 +45,10 @@ export async function productRoutes(app: FastifyInstance) {
           : undefined
       },
       include: {
-        stockBalances: query.storeId
+        stockBalances: storeId
           ? {
               where: {
-                storeId: query.storeId
+                storeId
               }
             }
           : {
@@ -63,17 +67,20 @@ export async function productRoutes(app: FastifyInstance) {
 
   app.get("/products/:id", async (request, reply) => {
     const params = z.object({ id: z.string() }).parse(request.params);
-    const query = z.object({ storeId: z.string().optional() }).parse(request.query);
+    const query = z.object({ organizationId: z.string().optional(), storeId: z.string().optional() }).parse(request.query);
+    const organizationId = assertOrganizationAccess(request, query.organizationId);
+    const storeId = assertStoreAccess(request, organizationId, query.storeId);
 
-    const product = await prisma.product.findUnique({
+    const product = await prisma.product.findFirst({
       where: {
-        id: params.id
+        id: params.id,
+        organizationId
       },
       include: {
-        stockBalances: query.storeId
+        stockBalances: storeId
           ? {
               where: {
-                storeId: query.storeId
+                storeId
               }
             }
           : {
@@ -91,10 +98,11 @@ export async function productRoutes(app: FastifyInstance) {
 
   app.post("/products", async (request, reply) => {
     const body = createProductSchema.parse(request.body);
+    const organizationId = assertOrganizationAccess(request, body.organizationId);
 
     const product = await prisma.product.create({
       data: {
-        organizationId: body.organizationId,
+        organizationId,
         sku: body.sku,
         barcode: body.barcode,
         name: body.name,
@@ -115,10 +123,14 @@ export async function productRoutes(app: FastifyInstance) {
 
   app.put("/products/:id", async (request, reply) => {
     const params = z.object({ id: z.string() }).parse(request.params);
-    const body = createProductSchema.partial().extend({ organizationId: z.string() }).parse(request.body);
+    const body = createProductSchema.partial().parse(request.body);
+    const organizationId = assertOrganizationAccess(request, body.organizationId);
 
-    const current = await prisma.product.findUnique({
-      where: { id: params.id }
+    const current = await prisma.product.findFirst({
+      where: {
+        id: params.id,
+        organizationId
+      }
     });
 
     if (!current) {
@@ -131,6 +143,7 @@ export async function productRoutes(app: FastifyInstance) {
       },
       data: {
         ...body,
+        organizationId,
         version: current.version + 1
       }
     });
@@ -140,6 +153,21 @@ export async function productRoutes(app: FastifyInstance) {
 
   app.delete("/products/:id", async (request, reply) => {
     const params = z.object({ id: z.string() }).parse(request.params);
+    const organizationId = assertOrganizationAccess(request);
+
+    const current = await prisma.product.findFirst({
+      where: {
+        id: params.id,
+        organizationId
+      },
+      select: {
+        id: true
+      }
+    });
+
+    if (!current) {
+      return reply.code(404).send({ message: "Produto nÃ£o encontrado." });
+    }
 
     await prisma.product.update({
       where: {

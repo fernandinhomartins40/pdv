@@ -110,6 +110,8 @@ export function App() {
   const [lastSyncError, setLastSyncError] = useState<string | null>(null);
   const [settings, setSettings] = useState<DesktopSettings>({
     apiBaseUrl: "http://localhost:3333/v1",
+    terminalId: "",
+    sessionToken: "",
     organizationId: "org_demo",
     storeId: "store_demo",
     operatorId: "cashier-001",
@@ -1206,6 +1208,18 @@ export function App() {
               <label className="settings-field">
                 <span>URL da API</span>
                 <input value={settingsDraft.apiBaseUrl} onChange={(event) => updateSettingsDraft("apiBaseUrl", event.target.value)} />
+              </label>
+              <label className="settings-field">
+                <span>Terminal / PDV</span>
+                <input value={settingsDraft.terminalId} onChange={(event) => updateSettingsDraft("terminalId", event.target.value)} />
+              </label>
+              <label className="settings-field" style={{ gridColumn: "1 / -1" }}>
+                <span>Token da sessÃ£o cloud</span>
+                <input
+                  value={settingsDraft.sessionToken}
+                  onChange={(event) => updateSettingsDraft("sessionToken", event.target.value)}
+                  placeholder="Cole o token gerado pelo login da API"
+                />
               </label>
               <label className="settings-field">
                 <span>Organização</span>

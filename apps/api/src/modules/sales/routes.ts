@@ -3,11 +3,12 @@ import { MovementType, Prisma, SaleStatus } from "@prisma/client";
 import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import { mapSale } from "../../lib/mappers";
+import { assertOrganizationAccess, assertStoreAccess } from "../../lib/auth";
 
 const createSaleSchema = z.object({
-  organizationId: z.string(),
-  storeId: z.string(),
-  operatorId: z.string(),
+  organizationId: z.string().optional(),
+  storeId: z.string().optional(),
+  operatorId: z.string().optional(),
   externalRef: z.string().optional().nullable(),
   discountAmount: z.number().nonnegative().default(0),
   items: z
@@ -35,16 +36,19 @@ export async function salesRoutes(app: FastifyInstance) {
   app.get("/sales", async (request) => {
     const query = z
       .object({
-        organizationId: z.string(),
+        organizationId: z.string().optional(),
         storeId: z.string().optional(),
         status: z.nativeEnum(SaleStatus).optional()
       })
       .parse(request.query);
 
+    const organizationId = assertOrganizationAccess(request, query.organizationId);
+    const storeId = assertStoreAccess(request, organizationId, query.storeId);
+
     const sales = await prisma.sale.findMany({
       where: {
-        organizationId: query.organizationId,
-        storeId: query.storeId,
+        organizationId,
+        storeId: storeId ?? undefined,
         status: query.status
       },
       include: {
@@ -67,10 +71,12 @@ export async function salesRoutes(app: FastifyInstance) {
 
   app.get("/sales/:id", async (request, reply) => {
     const params = z.object({ id: z.string() }).parse(request.params);
+    const organizationId = assertOrganizationAccess(request);
 
-    const sale = await prisma.sale.findUnique({
+    const sale = await prisma.sale.findFirst({
       where: {
-        id: params.id
+        id: params.id,
+        organizationId
       },
       include: {
         items: {
@@ -91,11 +97,20 @@ export async function salesRoutes(app: FastifyInstance) {
 
   app.post("/sales", async (request, reply) => {
     const body = createSaleSchema.parse(request.body);
+    const organizationId = assertOrganizationAccess(request, body.organizationId);
+    const storeId = assertStoreAccess(request, organizationId, body.storeId);
+
+    if (!storeId) {
+      return reply.code(400).send({ message: "Selecione uma loja ativa para registrar a venda." });
+    }
+
+    const operatorId = body.operatorId ?? request.auth.context.user.id;
 
     const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const productIds = body.items.map((item) => item.productId);
       const products = await tx.product.findMany({
         where: {
+          organizationId,
           id: {
             in: productIds
           }
@@ -107,9 +122,9 @@ export async function salesRoutes(app: FastifyInstance) {
 
       const sale = await tx.sale.create({
         data: {
-          organizationId: body.organizationId,
-          storeId: body.storeId,
-          operatorId: body.operatorId,
+          organizationId,
+          storeId,
+          operatorId,
           externalRef: body.externalRef,
           status: SaleStatus.COMPLETED,
           subtotalAmount,
@@ -151,8 +166,8 @@ export async function salesRoutes(app: FastifyInstance) {
 
         await tx.stockBalance.upsert({
           where: {
-            storeId_productId: {
-              storeId: body.storeId,
+              storeId_productId: {
+              storeId,
               productId: item.productId
             }
           },
@@ -162,7 +177,7 @@ export async function salesRoutes(app: FastifyInstance) {
             }
           },
           create: {
-            storeId: body.storeId,
+            storeId,
             productId: item.productId,
             quantity: -item.quantity
           }
@@ -170,7 +185,7 @@ export async function salesRoutes(app: FastifyInstance) {
 
         await tx.stockMovement.create({
           data: {
-            storeId: body.storeId,
+            storeId,
             productId: item.productId,
             quantity: -item.quantity,
             reason: `Venda ${sale.id}`,
@@ -188,10 +203,12 @@ export async function salesRoutes(app: FastifyInstance) {
 
   app.post("/sales/:id/cancel", async (request, reply) => {
     const params = z.object({ id: z.string() }).parse(request.params);
+    const organizationId = assertOrganizationAccess(request);
 
-    const sale = await prisma.sale.findUnique({
+    const sale = await prisma.sale.findFirst({
       where: {
-        id: params.id
+        id: params.id,
+        organizationId
       },
       include: {
         items: true

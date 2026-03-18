@@ -11,12 +11,16 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@fastify/cookie": "^10.0.1",
     "@fastify/cors": "^11.0.0",
+    "@fastify/rate-limit": "^10.3.0",
     "@pdv/database": "workspace:*",
     "@pdv/types": "workspace:*",
     "@prisma/client": "^6.5.0",
+    "bcryptjs": "^3.0.2",
     "fast-xml-parser": "^5.2.1",
     "fastify": "^5.2.1",
+    "jose": "^5.9.6",
     "zod": "^3.24.2"
   },
   "devDependencies": {

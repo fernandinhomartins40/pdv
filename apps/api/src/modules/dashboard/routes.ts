@@ -2,6 +2,7 @@ import { prisma } from "@pdv/database";
 import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import { endOfDay, previousMonth, startOfDay, startOfMonth } from "../../lib/time-window";
+import { assertOrganizationAccess, assertStoreAccess } from "../../lib/auth";
 
 async function aggregateWindow(organizationId: string, start: Date, end: Date) {
   const result = await prisma.sale.aggregate({
@@ -31,10 +32,13 @@ export async function dashboardRoutes(app: FastifyInstance) {
   app.get("/dashboard/overview", async (request) => {
     const query = z
       .object({
-        organizationId: z.string(),
-        storeId: z.string()
+        organizationId: z.string().optional(),
+        storeId: z.string().optional()
       })
       .parse(request.query);
+
+    const organizationId = assertOrganizationAccess(request, query.organizationId);
+    const storeId = assertStoreAccess(request, organizationId, query.storeId);
 
     const now = new Date();
     const todayStart = startOfDay(now);
@@ -46,23 +50,23 @@ export async function dashboardRoutes(app: FastifyInstance) {
     const previousMonthEnd = endOfDay(new Date(now.getFullYear(), now.getMonth(), 0));
 
     const [previous, current, yesterday, today, stockAlerts] = await Promise.all([
-      aggregateWindow(query.organizationId, previousMonthStart, previousMonthEnd),
-      aggregateWindow(query.organizationId, currentMonthStart, todayEnd),
-      aggregateWindow(query.organizationId, yesterdayStart, yesterdayEnd),
-      aggregateWindow(query.organizationId, todayStart, todayEnd),
+      aggregateWindow(organizationId, previousMonthStart, previousMonthEnd),
+      aggregateWindow(organizationId, currentMonthStart, todayEnd),
+      aggregateWindow(organizationId, yesterdayStart, yesterdayEnd),
+      aggregateWindow(organizationId, todayStart, todayEnd),
       prisma.product.findMany({
         where: {
-          organizationId: query.organizationId,
+          organizationId,
           stockBalances: {
             some: {
-              storeId: query.storeId
+              storeId: storeId ?? undefined
             }
           }
         },
         include: {
           stockBalances: {
             where: {
-              storeId: query.storeId
+              storeId: storeId ?? undefined
             }
           }
         },

@@ -3,16 +3,24 @@ import { MovementType, Prisma } from "@prisma/client";
 import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import { parseNfeProducts } from "../../lib/xml-parser";
+import { assertOrganizationAccess, assertStoreAccess } from "../../lib/auth";
 
 export async function xmlRoutes(app: FastifyInstance) {
   app.post("/xml/import", async (request, reply) => {
     const body = z
       .object({
-        organizationId: z.string(),
-        storeId: z.string(),
+        organizationId: z.string().optional(),
+        storeId: z.string().optional(),
         xml: z.string().min(32)
       })
       .parse(request.body);
+
+    const organizationId = assertOrganizationAccess(request, body.organizationId);
+    const storeId = assertStoreAccess(request, organizationId, body.storeId);
+
+    if (!storeId) {
+      return reply.code(400).send({ message: "Selecione uma loja ativa para importar XML." });
+    }
 
     const parsed = parseNfeProducts(body.xml);
 
@@ -20,7 +28,7 @@ export async function xmlRoutes(app: FastifyInstance) {
       await tx.nfeImport.upsert({
         where: {
           organizationId_xmlKey: {
-            organizationId: body.organizationId,
+            organizationId,
             xmlKey: parsed.accessKey
           }
         },
@@ -29,7 +37,7 @@ export async function xmlRoutes(app: FastifyInstance) {
           rawPayload: { xml: body.xml }
         },
         create: {
-          organizationId: body.organizationId,
+          organizationId,
           xmlKey: parsed.accessKey,
           supplierName: parsed.supplierName,
           rawPayload: { xml: body.xml }
@@ -45,7 +53,7 @@ export async function xmlRoutes(app: FastifyInstance) {
         const product = await tx.product.upsert({
           where: {
             organizationId_sku: {
-              organizationId: body.organizationId,
+              organizationId,
               sku: normalizedSku
             }
           },
@@ -58,7 +66,7 @@ export async function xmlRoutes(app: FastifyInstance) {
             cfop: item.cfop
           },
           create: {
-            organizationId: body.organizationId,
+            organizationId,
             sku: normalizedSku,
             barcode: item.gtin,
             name: item.name,
@@ -72,7 +80,7 @@ export async function xmlRoutes(app: FastifyInstance) {
         await tx.stockBalance.upsert({
           where: {
             storeId_productId: {
-              storeId: body.storeId,
+              storeId,
               productId: product.id
             }
           },
@@ -82,7 +90,7 @@ export async function xmlRoutes(app: FastifyInstance) {
             }
           },
           create: {
-            storeId: body.storeId,
+            storeId,
             productId: product.id,
             quantity: item.quantity
           }
@@ -90,7 +98,7 @@ export async function xmlRoutes(app: FastifyInstance) {
 
         await tx.stockMovement.create({
           data: {
-            storeId: body.storeId,
+            storeId,
             productId: product.id,
             quantity: item.quantity,
             reason: `Importacao XML ${parsed.accessKey}`,

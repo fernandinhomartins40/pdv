@@ -18,11 +18,17 @@ async function syncNow() {
 
   if (operations.length > 0) {
     try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json"
+      };
+
+      if (settings.sessionToken) {
+        headers.Authorization = `Bearer ${settings.sessionToken}`;
+      }
+
       const response = await fetch(`${settings.apiBaseUrl}/sync/push`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers,
         body: JSON.stringify({
           organizationId: settings.organizationId,
           storeId: settings.storeId,
@@ -64,7 +70,12 @@ async function syncNow() {
       url.searchParams.set("cursor", cursor);
     }
 
-    const response = await fetch(url);
+    const headers: Record<string, string> = {};
+    if (settings.sessionToken) {
+      headers.Authorization = `Bearer ${settings.sessionToken}`;
+    }
+
+    const response = await fetch(url, { headers });
     if (!response.ok) {
       throw new Error(`Falha HTTP ${response.status}`);
     }

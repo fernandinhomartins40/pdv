@@ -1,20 +1,61 @@
+import { prisma } from "@pdv/database";
+import { AppPageShell } from "../../components/app-page-shell";
 import { ModulePage } from "../../components/module-page";
+import { requireSession } from "../../lib/auth";
 
-export default function ProdutosPage() {
+function money(value: number) {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+export default async function ProdutosPage() {
+  const session = await requireSession();
+
+  const [products, activeCount, missingBarcode] = await Promise.all([
+    prisma.product.findMany({
+      where: {
+        organizationId: session.activeOrganizationId,
+        isActive: true
+      },
+      orderBy: {
+        updatedAt: "desc"
+      },
+      take: 3
+    }),
+    prisma.product.count({
+      where: {
+        organizationId: session.activeOrganizationId,
+        isActive: true
+      }
+    }),
+    prisma.product.count({
+      where: {
+        organizationId: session.activeOrganizationId,
+        isActive: true,
+        OR: [{ barcode: null }, { barcode: "" }]
+      }
+    })
+  ]);
+
+  const averagePrice =
+    products.length > 0 ? products.reduce((total, product) => total + Number(product.salePrice), 0) / products.length : 0;
+
   return (
-    <ModulePage
-      title="Produtos"
-      description="Cadastro manual, preços, GTIN, NCM, CFOP e publicação sincronizada entre nuvem e PDV local."
-      stats={[
-        { label: "Produtos Ativos", value: "1.248", accent: "#6B2EFF" },
-        { label: "Preço Médio", value: "R$ 38,40", accent: "#00B6C9" },
-        { label: "Sem GTIN", value: "27", accent: "#FF7A1A" }
-      ]}
-      rows={[
-        ["Café Especial 500g", "Ativo", "R$ 28,90", "F2"],
-        ["Água Mineral 510ml", "Ativo", "R$ 3,50", "F3"],
-        ["Combo Almoço Executivo", "Promoção", "R$ 42,00", "F8"]
-      ]}
-    />
+    <AppPageShell>
+      <ModulePage
+        title="Produtos"
+        description="Cadastro manual, precos, GTIN, NCM, CFOP e publicacao sincronizada entre nuvem e PDV local."
+        stats={[
+          { label: "Produtos Ativos", value: String(activeCount), accent: "#6B2EFF" },
+          { label: "Preco Medio", value: money(averagePrice), accent: "#00B6C9" },
+          { label: "Sem GTIN", value: String(missingBarcode), accent: "#FF7A1A" }
+        ]}
+        rows={products.map((product) => [
+          product.name,
+          product.isActive ? "Ativo" : "Inativo",
+          money(Number(product.salePrice)),
+          product.sku
+        ])}
+      />
+    </AppPageShell>
   );
 }

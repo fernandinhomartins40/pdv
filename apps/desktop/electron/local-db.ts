@@ -26,6 +26,8 @@ interface PersistedSalePayload {
 
 const defaultDesktopSettings: DesktopSettings = {
   apiBaseUrl: "http://localhost:3333/v1",
+  terminalId: "",
+  sessionToken: "",
   organizationId: demoContext.organizationId,
   storeId: demoContext.storeId,
   operatorId: demoOperator.id,
@@ -72,6 +74,8 @@ export class LocalDatabase {
   getSettings(): DesktopSettings {
     return {
       apiBaseUrl: this.readState("settings.apiBaseUrl") ?? defaultDesktopSettings.apiBaseUrl,
+      terminalId: this.readState("settings.terminalId") ?? defaultDesktopSettings.terminalId,
+      sessionToken: this.readState("settings.sessionToken") ?? defaultDesktopSettings.sessionToken,
       organizationId: this.readState("settings.organizationId") ?? defaultDesktopSettings.organizationId,
       storeId: this.readState("settings.storeId") ?? defaultDesktopSettings.storeId,
       operatorId: this.readState("settings.operatorId") ?? defaultDesktopSettings.operatorId,
@@ -95,6 +99,8 @@ export class LocalDatabase {
     }
 
     this.writeState("settings.apiBaseUrl", normalized.apiBaseUrl);
+    this.writeState("settings.terminalId", normalized.terminalId);
+    this.writeState("settings.sessionToken", normalized.sessionToken);
     this.writeState("settings.organizationId", normalized.organizationId);
     this.writeState("settings.storeId", normalized.storeId);
     this.writeState("settings.operatorId", normalized.operatorId);
@@ -833,6 +839,8 @@ export class LocalDatabase {
 
   private normalizeSettings(settings: DesktopSettings): DesktopSettings {
     const apiBaseUrl = settings.apiBaseUrl.trim().replace(/\/+$/, "");
+    const terminalId = settings.terminalId.trim();
+    const sessionToken = settings.sessionToken.trim();
     const organizationId = settings.organizationId.trim();
     const storeId = settings.storeId.trim();
     const operatorId = settings.operatorId.trim();
@@ -845,6 +853,8 @@ export class LocalDatabase {
 
     return {
       apiBaseUrl,
+      terminalId,
+      sessionToken,
       organizationId,
       storeId,
       operatorId,

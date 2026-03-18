@@ -1,5 +1,5 @@
 import { prisma } from "@pdv/database";
-import { UserRole } from "@prisma/client";
+import { MembershipStatus, UserRole } from "@prisma/client";
 import { demoContext, demoOperator, demoProducts } from "@pdv/types";
 
 interface ContextInput {
@@ -10,38 +10,30 @@ interface ContextInput {
   operatorEmail?: string | null;
 }
 
-function storeCode(storeId: string) {
-  return `STORE-${storeId}`.toUpperCase().replace(/[^A-Z0-9-]/g, "-").slice(0, 48);
-}
-
 export async function ensureOperationalContext(input: ContextInput) {
-  const organizationName =
-    input.organizationId === demoContext.organizationId ? "Organização Demo PDV" : `Organização ${input.organizationId}`;
-  const storeName = input.storeId === demoContext.storeId ? "Loja Demo PDV" : `Loja ${input.storeId}`;
+  const [organization, store] = await Promise.all([
+    prisma.organization.findUnique({
+      where: {
+        id: input.organizationId
+      },
+      select: {
+        id: true
+      }
+    }),
+    prisma.store.findFirst({
+      where: {
+        id: input.storeId,
+        organizationId: input.organizationId
+      },
+      select: {
+        id: true
+      }
+    })
+  ]);
 
-  await prisma.organization.upsert({
-    where: { id: input.organizationId },
-    update: { name: organizationName },
-    create: {
-      id: input.organizationId,
-      name: organizationName
-    }
-  });
-
-  await prisma.store.upsert({
-    where: { id: input.storeId },
-    update: {
-      organizationId: input.organizationId,
-      name: storeName,
-      code: storeCode(input.storeId)
-    },
-    create: {
-      id: input.storeId,
-      organizationId: input.organizationId,
-      name: storeName,
-      code: storeCode(input.storeId)
-    }
-  });
+  if (!organization || !store) {
+    throw new Error("Contexto operacional invalido para a sessao atual.");
+  }
 
   if (input.operatorId) {
     const email =
@@ -51,19 +43,55 @@ export async function ensureOperationalContext(input: ContextInput) {
       input.operatorName?.trim() ||
       (input.operatorId === demoOperator.id ? demoOperator.name : `Operador ${input.operatorId}`);
 
-    await prisma.user.upsert({
-      where: { id: input.operatorId },
+    const operator = await prisma.user.upsert({
+      where: {
+        id: input.operatorId
+      },
       update: {
-        organizationId: input.organizationId,
         email,
         name,
         role: UserRole.CASHIER
       },
       create: {
         id: input.operatorId,
-        organizationId: input.organizationId,
         email,
         name,
+        role: UserRole.CASHIER
+      }
+    });
+
+    const membership = await prisma.organizationMembership.upsert({
+      where: {
+        organizationId_userId: {
+          organizationId: input.organizationId,
+          userId: operator.id
+        }
+      },
+      update: {
+        role: UserRole.CASHIER,
+        status: MembershipStatus.ACTIVE
+      },
+      create: {
+        organizationId: input.organizationId,
+        userId: operator.id,
+        role: UserRole.CASHIER,
+        status: MembershipStatus.ACTIVE
+      }
+    });
+
+    await prisma.storeMembership.upsert({
+      where: {
+        organizationMembershipId_storeId: {
+          organizationMembershipId: membership.id,
+          storeId: input.storeId
+        }
+      },
+      update: {
+        role: UserRole.CASHIER
+      },
+      create: {
+        organizationMembershipId: membership.id,
+        storeId: input.storeId,
         role: UserRole.CASHIER
       }
     });
