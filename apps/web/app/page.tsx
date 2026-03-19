@@ -1,13 +1,16 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  Boxes,
   Building2,
   CheckCircle2,
   ChevronRight,
   Cloud,
   MonitorSmartphone,
+  Receipt,
   ShieldCheck,
   Store,
+  Users2,
   WifiOff
 } from "lucide-react";
 import { Badge } from "../components/ui/badge";
@@ -15,55 +18,55 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 
 const proof = [
-  { value: "Multiempresa", label: "uma conta distribui contexto para matriz, filial e franquia sem ruido visual" },
-  { value: "Offline-first", label: "o desktop continua vendendo com a mesma linguagem da retaguarda" },
-  { value: "Cloud + PDV", label: "landing, login e operacao compartilham a mesma base cromatica e hierarquia" }
+  { value: "Multiempresa", label: "uma conta pode operar varias lojas e caixas" },
+  { value: "Offline-first", label: "o caixa continua vendendo mesmo sem internet" },
+  { value: "Cloud + desktop", label: "retaguarda web e operacao de PDV no desktop" }
 ];
 
 const pillars = [
   {
     icon: Building2,
-    title: "Estrutura para multiplas lojas sem perder leitura",
-    description: "Conta, empresa, loja, terminal e operador aparecem como partes da mesma arquitetura visual."
+    title: "Estrutura para quem opera mais de uma unidade",
+    description: "Centralize matriz, filial, franquia e equipes sem misturar contexto de operacao."
   },
   {
     icon: WifiOff,
-    title: "Desktop pronto para operacao real",
-    description: "A mesma assinatura da plataforma chega ao caixa com contraste, velocidade e foco no fluxo."
+    title: "PDV pronto para o mundo real",
+    description: "Venda localmente, sincronize depois e mantenha a loja rodando quando a conexao falha."
   },
   {
     icon: ShieldCheck,
-    title: "Acesso com contexto e coerencia",
-    description: "Login, permissoes e jornada operacional falam a mesma linguagem em vez de parecerem produtos diferentes."
+    title: "Acesso por conta, loja e terminal",
+    description: "Cada usuario entra no contexto certo para vender, acompanhar ou administrar."
   }
 ];
 
 const operationalFlow = [
   "Conta e autenticacao centralizadas",
-  "Empresa, loja e PDV com contexto claro",
-  "Produtos, estoque e venda no mesmo compasso",
-  "Sincronizacao continua sem perder legibilidade"
+  "Empresa e lojas organizadas por tenant",
+  "PDVs vinculados a cada unidade",
+  "Equipe, estoque, venda e caixa no mesmo fluxo"
 ];
 
 const modules = [
   {
-    icon: Cloud,
-    eyebrow: "Retaguarda cloud",
-    title: "Paineis e modulos administrativos em superficies claras com gradientes de marca.",
+    icon: Store,
+    eyebrow: "Retaguarda",
+    title: "Backoffice para controlar produtos, estoque, XML e financeiro.",
     tone:
       "border border-transparent bg-[linear-gradient(135deg,#1ea7ff,#8758e2_58%,#d42eb5)] text-white shadow-float"
   },
   {
     icon: MonitorSmartphone,
-    eyebrow: "Login e entrada",
-    title: "Acesso com cartao branco, detalhes premium e contraponto escuro para passar consistencia.",
+    eyebrow: "Frente de caixa",
+    title: "Aplicativo desktop focado em velocidade, leitura e continuidade operacional.",
     tone:
       "border border-[#101726]/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(242,246,251,0.98))] text-[#111827] shadow-ink"
   },
   {
-    icon: Store,
-    eyebrow: "Desktop operacional",
-    title: "PDV com superficies solidas, destaques em azul e magenta e comandos que continuam rapidos.",
+    icon: Cloud,
+    eyebrow: "Gestao",
+    title: "Painel online para acompanhar a operacao e escalar para varias lojas.",
     tone:
       "border border-white/10 bg-[linear-gradient(145deg,#101726,#24194e_58%,#6a237e)] text-white shadow-float"
   }
@@ -72,25 +75,19 @@ const modules = [
 const onboarding = [
   {
     step: "01",
-    title: "Entre no ambiente",
-    description: "O login ja prepara o usuario para a mesma identidade visual do painel e do PDV."
+    title: "Entre na conta",
+    description: "Acesse o painel para ativar sua empresa e destravar o ambiente comercial."
   },
   {
     step: "02",
     title: "Estruture a operacao",
-    description: "Empresa, primeira loja, usuarios e primeiro terminal entram em um fluxo com hierarquia clara."
+    description: "Cadastre a primeira loja, os primeiros usuarios e o primeiro terminal."
   },
   {
     step: "03",
-    title: "Ligue o desktop",
-    description: "O app local herda a mesma paleta, os mesmos acentos e a mesma sensacao de produto unico."
+    title: "Conecte o PDV",
+    description: "Configure o desktop, sincronize produtos e comece a operar sem improviso."
   }
-];
-
-const moments = [
-  { label: "Landing", value: "hero leve com bloco escuro e acentos liquidos" },
-  { label: "Login", value: "entrada premium em branco, prata e grafite" },
-  { label: "Desktop", value: "caixa focado com os mesmos gradientes da marca" }
 ];
 
 export default function LandingPage() {
@@ -138,17 +135,16 @@ export default function LandingPage() {
           <div className="grid gap-12 pt-14 lg:grid-cols-[1.02fr_0.98fr] lg:items-start">
             <div className="flex flex-col gap-8">
               <Badge variant="accent" className="w-fit border-0">
-                Sistema unico do primeiro clique ao primeiro fechamento de caixa
+                SaaS para quem vende na loja e governa a operacao inteira
               </Badge>
 
               <div className="space-y-6">
                 <h1 className="max-w-4xl font-display text-5xl leading-[0.92] tracking-[-0.05em] text-[#111827] md:text-7xl">
-                  Uma identidade so para landing, login e desktop.
+                  Seu varejo nao precisa escolher entre caixa rapido e controle serio.
                 </h1>
                 <p className="max-w-2xl text-lg leading-8 text-[#667085] md:text-xl">
-                  A nova direcao visual parte da paleta das referencias: azul claro, violeta, magenta, branco e
-                  grafite. O resultado e uma experiencia mais premium, mais coesa e com menos sensacao de telas
-                  desconectadas.
+                  Revendeo junta retaguarda cloud, autenticacao, multiempresa e PDV desktop em uma experiencia pensada
+                  para quem opera mais de uma loja, mais de um caixa e mais de uma equipe.
                 </p>
               </div>
 
@@ -161,7 +157,7 @@ export default function LandingPage() {
                 </Button>
                 <Button asChild variant="secondary" size="lg">
                   <a href="#produto">
-                    Ver como o produto se conecta
+                    Ver como o produto funciona
                     <ChevronRight className="size-4" />
                   </a>
                 </Button>
@@ -189,24 +185,22 @@ export default function LandingPage() {
               <Card className="relative z-10 ml-auto mt-12 max-w-[430px] overflow-hidden rounded-[2.6rem] border-white/60 bg-white/76 shadow-float backdrop-blur-xl">
                 <CardHeader className="space-y-5">
                   <Badge variant="outline" className="w-fit border-[#101726]/8 bg-white/70 text-[#111827]">
-                    Conceito visual aplicado
+                    Visao da operacao
                   </Badge>
                   <div className="space-y-3">
-                    <CardTitle className="text-4xl text-[#111827]">
-                      A mesma assinatura premium aparece em todas as entradas do produto.
-                    </CardTitle>
+                    <CardTitle className="text-4xl text-[#111827]">Uma camada unica entre conta, loja, PDV e venda.</CardTitle>
                     <CardDescription className="max-w-lg text-base leading-7 text-[#667085]">
-                      O contraste entre branco, prata e blocos escuros organiza o fluxo, enquanto o gradiente de marca
-                      costura tudo do marketing ate a operacao.
+                      Menos gambiarra entre sistemas, menos dependencia de planilha e mais leitura do que acontece em cada
+                      caixa.
                     </CardDescription>
                   </div>
                 </CardHeader>
                 <CardContent className="grid gap-4">
                   <div className="rounded-[2rem] bg-[linear-gradient(145deg,#101726,#24194e_58%,#6a237e)] p-5 text-white shadow-float">
                     <div className="flex items-center justify-between border-b border-dashed border-white/12 pb-3">
-                      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">Fluxo unificado</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">Operacao ao vivo</span>
                       <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-[#6cc8ff]">
-                        web + auth + desktop
+                        3 lojas sincronizadas
                       </span>
                     </div>
                     <div className="space-y-3 py-4 text-sm text-white/84">
@@ -217,18 +211,18 @@ export default function LandingPage() {
                         </div>
                       ))}
                     </div>
-                    <div className="grid gap-2 border-t border-dashed border-white/12 pt-4 text-[11px] uppercase tracking-[0.16em] text-white/56">
+                    <div className="grid gap-2 border-t border-dashed border-white/12 pt-4 text-[11px] text-white/56">
                       <div className="flex justify-between">
-                        <span>Landing</span>
-                        <span>mesma marca</span>
+                        <span>Loja Centro</span>
+                        <span>Caixa 03 ativo</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Login</span>
-                        <span>mesmo contraste</span>
+                        <span>Loja Norte</span>
+                        <span>Sync em dia</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Desktop</span>
-                        <span>mesmo gradiente</span>
+                        <span>Loja Oeste</span>
+                        <span>Equipe validada</span>
                       </div>
                     </div>
                   </div>
@@ -236,48 +230,35 @@ export default function LandingPage() {
                   <div className="grid gap-4 sm:grid-cols-[1.02fr_0.98fr]">
                     <div className="rounded-[2rem] bg-[linear-gradient(135deg,#1ea7ff,#8758e2_58%,#d42eb5)] p-5 text-white shadow-ink">
                       <div className="mb-7 inline-flex rounded-full bg-white/14 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em]">
-                        Paleta base
+                        Fluxo comercial
                       </div>
                       <p className="max-w-xs font-display text-3xl leading-tight tracking-[-0.04em]">
-                        Ciano, violeta, magenta, branco, prata e grafite.
+                        Conta - Empresa - Loja - PDV
                       </p>
                     </div>
 
-                    <div className="grid gap-4">
-                      <div className="rounded-[1.8rem] border border-[#101726]/8 bg-[linear-gradient(180deg,#ffffff,#edf2f8)] p-5 text-[#111827] shadow-ink">
-                        <div className="mb-5 inline-flex rounded-full bg-[#101726]/6 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
-                          Superficie silver
-                        </div>
-                        <p className="text-sm leading-6 text-[#667085]">
-                          Cartoes, formularios e areas de leitura ficam leves e legiveis.
-                        </p>
+                    <div className="rounded-[1.8rem] bg-[#101216] p-5 text-white shadow-float">
+                      <div className="mb-5 inline-flex rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
+                        Recibo de valor
                       </div>
-                      <div className="rounded-[1.8rem] bg-[#101216] p-5 text-white shadow-float">
-                        <div className="mb-5 inline-flex rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
-                          Contraste grafite
+                      <div className="space-y-3 text-sm text-white/74">
+                        <div className="flex items-center gap-3">
+                          <Receipt className="size-4 text-[#6cc8ff]" />
+                          <span>Produtos, estoque e caixa no mesmo ritmo</span>
                         </div>
-                        <p className="text-sm leading-6 text-white/74">
-                          Blocos escuros entram como apoio visual para highlights e status criticos.
-                        </p>
+                        <div className="flex items-center gap-3">
+                          <Users2 className="size-4 text-[#6cc8ff]" />
+                          <span>Usuarios com acesso ao contexto certo</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Boxes className="size-4 text-[#6cc8ff]" />
+                          <span>Mais lojas sem perder governanca</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-
-              <div className="relative z-10 mt-6 grid gap-4 sm:grid-cols-3">
-                {moments.map((item) => (
-                  <div
-                    key={item.label}
-                    className="rounded-[1.8rem] border border-[#101726]/8 bg-white/80 p-5 shadow-ink backdrop-blur"
-                  >
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#667085]">
-                      {item.label}
-                    </span>
-                    <p className="mt-3 text-sm leading-6 text-[#111827]">{item.value}</p>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </div>
@@ -297,11 +278,11 @@ export default function LandingPage() {
               Produto para operacao real
             </Badge>
             <h2 className="font-display text-4xl leading-tight tracking-[-0.04em] md:text-6xl">
-              Nao e so trocar cor. E dar uma gramatica unica para a plataforma inteira.
+              Nao e so um sistema de caixa. E a arquitetura da sua operacao.
             </h2>
             <p className="max-w-xl text-lg leading-8 text-white/74">
-              A interface passa a parecer uma familia de produtos: hero claro, paineis premium, contrastes escuros e
-              acentos liquidos em azul, roxo e magenta.
+              A proposta da Revendeo e simples: dar velocidade na ponta sem perder controle no topo. O que entra em
+              produto, usuario, loja e terminal continua coerente ate a venda.
             </p>
           </div>
 
@@ -337,14 +318,14 @@ export default function LandingPage() {
           <Card className="overflow-hidden rounded-[2.5rem] border-0 bg-[linear-gradient(145deg,#101726,#23194d_56%,#d42eb5)] text-white shadow-float">
             <CardHeader className="space-y-5">
               <Badge variant="outline" className="w-fit border-white/14 bg-white/10 text-white">
-                Entrada coerente
+                Entrada rapida
               </Badge>
               <CardTitle className="text-4xl text-white md:text-5xl">
-                O mesmo design conduz a jornada do marketing ate o primeiro PDV ativo.
+                Do primeiro login ao primeiro PDV ativo sem enrolacao.
               </CardTitle>
               <CardDescription className="max-w-md text-base leading-7 text-white/74">
-                A entrada deixa de parecer uma troca abrupta entre produtos diferentes e passa a funcionar como um mesmo
-                sistema com etapas claras.
+                A landing precisa vender clareza. O produto precisa entregar velocidade de entrada. Os dois estao alinhados
+                aqui.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -392,14 +373,13 @@ export default function LandingPage() {
           <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
             <div className="space-y-5">
               <Badge variant="outline" className="w-fit border-white/15 bg-white/10 text-white">
-                Sistema unificado
+                Pronto para entrar
               </Badge>
               <h2 className="max-w-3xl font-display text-4xl leading-[0.94] tracking-[-0.04em] md:text-6xl">
-                O produto inteiro agora parte da mesma paleta e da mesma direcao visual.
+                Se a operacao e seria, a entrada no sistema tambem precisa ser.
               </h2>
               <p className="max-w-2xl text-lg leading-8 text-white/78">
-                Landing vende com a mesma energia que o login recebe e que o desktop executa. Isso reduz ruido e aumenta
-                percepcao de produto solido.
+                Entre no painel e avance para o contexto certo. A landing vende o produto. O login abre a operacao.
               </p>
             </div>
 
