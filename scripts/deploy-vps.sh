@@ -15,6 +15,9 @@ INSTALLER_FILENAME="${INSTALLER_FILENAME:-revendeo-pdv-installer.exe}"
 COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-revendeo}"
 DOCKER_COMPOSE_FILE="${APP_DIR}/docker-compose.vps.yml"
 COMPOSE_PROFILE_ARGS=()
+LEGACY_HOST_POSTGRES_PROXY_ENABLED="${LEGACY_HOST_POSTGRES_PROXY_ENABLED:-0}"
+LEGACY_HOST_POSTGRES_PROXY_PORT="${LEGACY_HOST_POSTGRES_PROXY_PORT:-5432}"
+LEGACY_HOST_POSTGRES_PROXY_SERVICE="revendeo-postgres-proxy.service"
 
 log() {
   printf '\n==> %s\n' "$1"
@@ -57,6 +60,25 @@ wait_for_http() {
 
   dump_service_diagnostics "${service_name}"
   echo "Timeout aguardando ${name} responder em ${url}."
+  exit 1
+}
+
+wait_for_tcp() {
+  local name="$1"
+  local host="$2"
+  local port="$3"
+  local max_attempts="${4:-15}"
+  local attempt
+
+  for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+    if timeout 1 bash -lc "</dev/tcp/${host}/${port}" >/dev/null 2>&1; then
+      return
+    fi
+
+    sleep 1
+  done
+
+  echo "Timeout aguardando ${name} responder em ${host}:${port}."
   exit 1
 }
 
@@ -291,6 +313,86 @@ ensure_docker() {
   systemctl start docker
 }
 
+disable_legacy_host_postgres_proxy() {
+  local service_file="/etc/systemd/system/${LEGACY_HOST_POSTGRES_PROXY_SERVICE}"
+
+  if [[ ! -f "${service_file}" ]]; then
+    return
+  fi
+
+  log "Desativando proxy legado do PostgreSQL no host"
+  systemctl disable --now "${LEGACY_HOST_POSTGRES_PROXY_SERVICE}" || true
+  rm -f "${service_file}"
+  systemctl daemon-reload
+}
+
+get_docker_bridge_gateway() {
+  local gateway_ip=""
+
+  gateway_ip="$(docker network inspect bridge --format '{{(index .IPAM.Config 0).Gateway}}' 2>/dev/null || true)"
+  if [[ -n "${gateway_ip}" ]]; then
+    printf '%s\n' "${gateway_ip}"
+    return 0
+  fi
+
+  gateway_ip="$(ip -4 addr show docker0 2>/dev/null | awk '/inet / { print $2 }' | cut -d/ -f1 | head -n 1)"
+  if [[ -n "${gateway_ip}" ]]; then
+    printf '%s\n' "${gateway_ip}"
+    return 0
+  fi
+
+  return 1
+}
+
+ensure_legacy_host_postgres_proxy() {
+  local service_file="/etc/systemd/system/${LEGACY_HOST_POSTGRES_PROXY_SERVICE}"
+  local gateway_ip=""
+
+  if [[ "${LEGACY_HOST_POSTGRES_PROXY_ENABLED:-0}" != "1" ]]; then
+    disable_legacy_host_postgres_proxy
+    return
+  fi
+
+  if [[ "${DATABASE_URL:-}" != *"@host.docker.internal"* ]]; then
+    echo "LEGACY_HOST_POSTGRES_PROXY_ENABLED=1 requer DATABASE_URL apontando para host.docker.internal."
+    exit 1
+  fi
+
+  log "Configurando proxy do PostgreSQL legado do host para containers"
+  apt-get install -y socat
+
+  wait_for_tcp "PostgreSQL legado do host" "127.0.0.1" "${LEGACY_HOST_POSTGRES_PROXY_PORT}" 15
+
+  gateway_ip="$(get_docker_bridge_gateway || true)"
+  if [[ -z "${gateway_ip}" ]]; then
+    echo "Nao foi possivel descobrir o gateway da bridge Docker para publicar o proxy do PostgreSQL."
+    exit 1
+  fi
+
+  cat >"${service_file}" <<EOF
+[Unit]
+Description=Revendeo PostgreSQL proxy for Docker containers
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=2
+ExecStart=/usr/bin/socat TCP-LISTEN:${LEGACY_HOST_POSTGRES_PROXY_PORT},bind=${gateway_ip},reuseaddr,fork TCP:127.0.0.1:${LEGACY_HOST_POSTGRES_PROXY_PORT}
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  systemctl daemon-reload
+  systemctl enable "${LEGACY_HOST_POSTGRES_PROXY_SERVICE}"
+  systemctl restart "${LEGACY_HOST_POSTGRES_PROXY_SERVICE}"
+
+  wait_for_tcp "proxy do PostgreSQL legado" "${gateway_ip}" "${LEGACY_HOST_POSTGRES_PROXY_PORT}" 15
+}
+
 apply_database_schema() {
   log "Aplicando schema do banco"
   compose run --rm --no-deps api sh -lc '
@@ -460,6 +562,7 @@ main() {
   ensure_docker_packages
   ensure_docker
   ensure_env_file
+  ensure_legacy_host_postgres_proxy
   ensure_downloads_dir
   stop_legacy_services
   start_local_postgres

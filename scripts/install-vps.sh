@@ -19,9 +19,22 @@ LOCAL_POSTGRES_DB="${LOCAL_POSTGRES_DB:-revendeo}"
 LOCAL_POSTGRES_USER="${LOCAL_POSTGRES_USER:-revendeo_app}"
 LOCAL_POSTGRES_PASSWORD_FILE="${LOCAL_POSTGRES_PASSWORD_FILE:-/root/.revendeo-postgres-password}"
 LOCAL_POSTGRES_PASSWORD="${LOCAL_POSTGRES_PASSWORD:-}"
+LEGACY_HOST_POSTGRES_PROXY_ENABLED="${LEGACY_HOST_POSTGRES_PROXY_ENABLED:-0}"
+LEGACY_HOST_POSTGRES_PROXY_PORT="${LEGACY_HOST_POSTGRES_PROXY_PORT:-5432}"
 
 log() {
   printf '\n==> %s\n' "$1"
+}
+
+extract_database_port() {
+  local database_url="${1:-${DATABASE_URL:-}}"
+
+  if [[ "${database_url}" =~ @[^/?#]+:([0-9]+) ]]; then
+    printf '%s\n' "${BASH_REMATCH[1]}"
+    return
+  fi
+
+  printf '%s\n' "5432"
 }
 
 resolve_app_scheme() {
@@ -105,10 +118,23 @@ normalize_database_url_for_containers() {
 
   if [[ "${DATABASE_URL}" == *"@127.0.0.1:"* || "${DATABASE_URL}" == *"@localhost:"* ]]; then
     log "DATABASE_URL local legado detectado; ajustando acesso para containers via host.docker.internal"
+    LEGACY_HOST_POSTGRES_PROXY_ENABLED=1
+    LEGACY_HOST_POSTGRES_PROXY_PORT="$(extract_database_port "${DATABASE_URL}")"
     DATABASE_URL="${DATABASE_URL//@127.0.0.1:/@host.docker.internal:}"
     DATABASE_URL="${DATABASE_URL//@localhost:/@host.docker.internal:}"
     LOCAL_POSTGRES_ENABLED=0
+    return
   fi
+
+  if [[ "${DATABASE_URL}" == *"@host.docker.internal"* ]]; then
+    LEGACY_HOST_POSTGRES_PROXY_ENABLED=1
+    LEGACY_HOST_POSTGRES_PROXY_PORT="$(extract_database_port "${DATABASE_URL}")"
+    LOCAL_POSTGRES_ENABLED=0
+    return
+  fi
+
+  LEGACY_HOST_POSTGRES_PROXY_ENABLED=0
+  LEGACY_HOST_POSTGRES_PROXY_PORT=5432
 }
 
 prepare_database_url() {
@@ -126,6 +152,8 @@ prepare_database_url() {
   log "DATABASE_URL nao informado; gerando configuracao local de PostgreSQL no Docker"
   generate_local_postgres_password
   LOCAL_POSTGRES_ENABLED=1
+  LEGACY_HOST_POSTGRES_PROXY_ENABLED=0
+  LEGACY_HOST_POSTGRES_PROXY_PORT=5432
   DATABASE_URL="postgresql://${LOCAL_POSTGRES_USER}:${LOCAL_POSTGRES_PASSWORD}@postgres:5432/${LOCAL_POSTGRES_DB}?schema=public"
 }
 
@@ -156,6 +184,10 @@ write_env_file() {
       printf '%s\n' "COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}"
       printf '%s\n' "DOWNLOADS_DIR=${DOWNLOADS_DIR}"
       printf '%s\n' "LOCAL_POSTGRES_ENABLED=${LOCAL_POSTGRES_ENABLED}"
+      printf '%s\n' "LEGACY_HOST_POSTGRES_PROXY_ENABLED=${LEGACY_HOST_POSTGRES_PROXY_ENABLED}"
+      if [[ "${LEGACY_HOST_POSTGRES_PROXY_ENABLED}" == "1" ]]; then
+        printf '%s\n' "LEGACY_HOST_POSTGRES_PROXY_PORT=${LEGACY_HOST_POSTGRES_PROXY_PORT}"
+      fi
       if [[ "${LOCAL_POSTGRES_ENABLED}" == "1" ]]; then
         printf '%s\n' "LOCAL_POSTGRES_DB=${LOCAL_POSTGRES_DB}"
         printf '%s\n' "LOCAL_POSTGRES_USER=${LOCAL_POSTGRES_USER}"
