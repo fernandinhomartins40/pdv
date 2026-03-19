@@ -93,6 +93,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build shared workspace packages
+        run: |
+          pnpm --filter @pdv/types build
+          pnpm --filter @pdv/database build
+          pnpm --filter @pdv/ui build
+
       - name: Build Windows installer
         run: pnpm --filter @pdv/desktop dist:win
 
