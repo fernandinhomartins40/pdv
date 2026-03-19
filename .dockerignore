@@ -1,0 +1,15 @@
+.git
+.github
+.turbo
+node_modules
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/.turbo
+apps/desktop/release
+apps/desktop/dist
+apps/desktop/dist-electron
+docs
+.env.production
+.env.production.backup

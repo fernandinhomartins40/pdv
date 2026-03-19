@@ -6,26 +6,37 @@ APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${APP_DIR}/.env.production"
 PRIMARY_DOMAIN="${PRIMARY_DOMAIN:-revendeo.com.br}"
 SECONDARY_DOMAIN="${SECONDARY_DOMAIN:-www.revendeo.com.br}"
-WEB_PORT="${WEB_PORT:-3040}"
-API_PORT="${API_PORT:-3041}"
-REQUIRED_NODE_MAJOR="${REQUIRED_NODE_MAJOR:-20}"
+APP_PORT="${APP_PORT:-${WEB_PORT:-3040}}"
+WEB_INTERNAL_PORT="${WEB_INTERNAL_PORT:-3000}"
+API_INTERNAL_PORT="${API_INTERNAL_PORT:-3001}"
 TLS_ENABLED="${TLS_ENABLED:-1}"
 DOWNLOADS_DIR="${DOWNLOADS_DIR:-/var/www/revendeo-downloads}"
 INSTALLER_FILENAME="${INSTALLER_FILENAME:-revendeo-pdv-installer.exe}"
+COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-revendeo}"
+DOCKER_COMPOSE_FILE="${APP_DIR}/docker-compose.vps.yml"
+COMPOSE_PROFILE_ARGS=()
 
 log() {
   printf '\n==> %s\n' "$1"
+}
+
+compose() {
+  docker compose \
+    --project-name "${COMPOSE_PROJECT_NAME}" \
+    --file "${DOCKER_COMPOSE_FILE}" \
+    "${COMPOSE_PROFILE_ARGS[@]}" \
+    "$@"
 }
 
 dump_service_diagnostics() {
   local service_name="$1"
 
   echo
-  echo "---- systemctl status: ${service_name} ----"
-  systemctl --no-pager --full status "${service_name}" || true
+  echo "---- docker compose ps ----"
+  compose ps || true
   echo
-  echo "---- journalctl: ${service_name} ----"
-  journalctl -u "${service_name}" --no-pager -n 120 || true
+  echo "---- docker compose logs: ${service_name} ----"
+  compose logs --tail 120 "${service_name}" || true
   echo
 }
 
@@ -39,12 +50,6 @@ wait_for_http() {
   for ((attempt = 1; attempt <= max_attempts; attempt++)); do
     if curl --fail --silent --show-error "${url}" >/dev/null; then
       return
-    fi
-
-    if ! systemctl is-active --quiet "${service_name}"; then
-      dump_service_diagnostics "${service_name}"
-      echo "${name} nao ficou ativo."
-      exit 1
     fi
 
     sleep 2
@@ -154,28 +159,20 @@ require_root() {
 }
 
 ensure_base_packages() {
+  local -a packages=(curl ca-certificates git nginx docker.io)
+
   log "Instalando dependencias de sistema"
   disable_redundant_ubuntu_mirror_file
   normalize_apt_sources
   apt_update_with_recovery
-  apt-get install -y curl ca-certificates git nginx
-}
 
-ensure_node() {
-  local node_major=""
-
-  if command -v node >/dev/null 2>&1; then
-    node_major="$(node -p "process.versions.node.split('.')[0]")"
+  if apt-cache show docker-compose-plugin >/dev/null 2>&1; then
+    packages+=(docker-compose-plugin)
+  elif apt-cache show docker-compose-v2 >/dev/null 2>&1; then
+    packages+=(docker-compose-v2)
   fi
 
-  if [[ -z "${node_major}" || "${node_major}" -lt "${REQUIRED_NODE_MAJOR}" ]]; then
-    log "Instalando Node.js ${REQUIRED_NODE_MAJOR}"
-    curl -fsSL "https://deb.nodesource.com/setup_${REQUIRED_NODE_MAJOR}.x" | bash -
-    apt-get install -y nodejs
-  fi
-
-  corepack enable
-  corepack prepare pnpm@9.15.0 --activate
+  apt-get install -y "${packages[@]}"
 }
 
 ensure_env_file() {
@@ -188,6 +185,11 @@ ensure_env_file() {
   # shellcheck disable=SC1090
   . "${ENV_FILE}"
   set +a
+
+  COMPOSE_PROFILE_ARGS=()
+  if [[ "${LOCAL_POSTGRES_ENABLED:-0}" == "1" ]]; then
+    COMPOSE_PROFILE_ARGS+=(--profile local-db)
+  fi
 }
 
 ensure_downloads_dir() {
@@ -195,123 +197,82 @@ ensure_downloads_dir() {
   install -d -m 755 "${DOWNLOADS_DIR}"
 }
 
-ensure_local_postgres() {
-  local original_dir
+ensure_docker() {
+  log "Garantindo daemon Docker ativo"
+  systemctl enable docker
+  systemctl start docker
+}
 
+apply_database_schema() {
+  log "Aplicando schema do banco"
+  compose run --rm --no-deps api sh -lc '
+    set -eu
+    pnpm db:generate
+
+    if [ -d packages/database/prisma/migrations ] && find packages/database/prisma/migrations -mindepth 1 -maxdepth 1 | grep -q .; then
+      pnpm db:deploy
+    else
+      pnpm --filter @pdv/database exec prisma db push --schema prisma/schema.prisma --accept-data-loss
+    fi
+  '
+}
+
+stop_legacy_services() {
+  local service_name
+
+  for service_name in revendeo-api.service revendeo-web.service; do
+    if systemctl list-unit-files "${service_name}" >/dev/null 2>&1; then
+      log "Desativando servico legado ${service_name}"
+      systemctl disable --now "${service_name}" || true
+    fi
+  done
+}
+
+wait_for_container_health() {
+  local service_name="$1"
+  local max_attempts="${2:-30}"
+  local attempt
+  local container_id
+  local status
+
+  for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+    container_id="$(compose ps -q "${service_name}" 2>/dev/null || true)"
+
+    if [[ -n "${container_id}" ]]; then
+      status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "${container_id}" 2>/dev/null || true)"
+      if [[ "${status}" == "healthy" ]]; then
+        return
+      fi
+    fi
+
+    sleep 2
+  done
+
+  dump_service_diagnostics "${service_name}"
+  echo "Timeout aguardando o container ${service_name} ficar saudavel."
+  exit 1
+}
+
+start_local_postgres() {
   if [[ "${LOCAL_POSTGRES_ENABLED:-0}" != "1" ]]; then
     return
   fi
 
-  log "Provisionando PostgreSQL local"
-  apt-get install -y postgresql
-  systemctl enable postgresql
-  systemctl start postgresql
-
-  original_dir="$(pwd)"
-  cd /tmp
-
-  if ! runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${LOCAL_POSTGRES_USER}'" | grep -q 1; then
-    runuser -u postgres -- psql -c "CREATE ROLE ${LOCAL_POSTGRES_USER} LOGIN PASSWORD '${LOCAL_POSTGRES_PASSWORD}'"
-  else
-    runuser -u postgres -- psql -c "ALTER ROLE ${LOCAL_POSTGRES_USER} WITH LOGIN PASSWORD '${LOCAL_POSTGRES_PASSWORD}'"
-  fi
-
-  if ! runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_database WHERE datname='${LOCAL_POSTGRES_DB}'" | grep -q 1; then
-    runuser -u postgres -- createdb -O "${LOCAL_POSTGRES_USER}" "${LOCAL_POSTGRES_DB}"
-  fi
-
-  cd "${original_dir}"
+  log "Subindo PostgreSQL local no Docker"
+  compose up -d postgres
+  wait_for_container_health "postgres" 30
 }
 
-apply_database_schema() {
-  if [[ -d "${APP_DIR}/packages/database/prisma/migrations" ]] && find "${APP_DIR}/packages/database/prisma/migrations" -mindepth 1 -maxdepth 1 | read -r _; then
-    log "Aplicando migrations versionadas do Prisma"
-    pnpm db:deploy
-  else
-    log "Nenhuma migration versionada encontrada; aplicando schema atual com prisma db push --accept-data-loss"
-    pnpm --filter @pdv/database exec prisma db push --schema prisma/schema.prisma --accept-data-loss
-  fi
-}
-
-build_apps() {
-  log "Instalando dependencias do monorepo"
+build_images() {
+  log "Construindo imagens Docker da API e do painel"
   cd "${APP_DIR}"
-
-  if [[ -f "${APP_DIR}/pnpm-lock.yaml" ]]; then
-    SKIP_DESKTOP_POSTINSTALL=1 pnpm install --frozen-lockfile --prod=false
-  else
-    log "pnpm-lock.yaml ausente; instalando sem frozen-lockfile"
-    SKIP_DESKTOP_POSTINSTALL=1 pnpm install --no-frozen-lockfile --prod=false
-  fi
-
-  log "Gerando cliente Prisma"
-  pnpm db:generate
-
-  apply_database_schema
-
-  log "Build dos pacotes compartilhados"
-  pnpm --filter @pdv/types build
-  pnpm --filter @pdv/database build
-
-  log "Build da API"
-  pnpm --filter @pdv/api build
-
-  log "Build do painel web"
-  pnpm --filter @pdv/web build
+  compose build --pull web api
 }
 
-write_systemd_service() {
-  local service_name="$1"
-  local description="$2"
-  local after="$3"
-  local exec_start="$4"
-  local extra_env="$5"
-
-  cat >"/etc/systemd/system/${service_name}.service" <<EOF
-[Unit]
-Description=${description}
-After=${after}
-
-[Service]
-Type=simple
-WorkingDirectory=${APP_DIR}
-EnvironmentFile=${ENV_FILE}
-${extra_env}
-ExecStart=${exec_start}
-Restart=always
-RestartSec=5
-User=root
-
-[Install]
-WantedBy=multi-user.target
-EOF
-}
-
-configure_services() {
-  local node_bin
-  local pnpm_bin
-
-  node_bin="$(command -v node)"
-  pnpm_bin="$(command -v pnpm)"
-
-  log "Configurando servicos systemd"
-  write_systemd_service \
-    "revendeo-api" \
-    "Revendeo API" \
-    "network.target" \
-    "${node_bin} ${APP_DIR}/apps/api/dist/server.js" \
-    "Environment=PORT=${API_PORT}"
-
-  write_systemd_service \
-    "revendeo-web" \
-    "Revendeo Web" \
-    "network.target revendeo-api.service" \
-    "${pnpm_bin} --filter @pdv/web start --hostname 127.0.0.1 --port ${WEB_PORT}" \
-    "Environment=PORT=${WEB_PORT}"
-
-  systemctl daemon-reload
-  systemctl enable revendeo-api.service revendeo-web.service
-  systemctl restart revendeo-api.service revendeo-web.service
+start_stack() {
+  log "Subindo stack Docker da aplicacao"
+  cd "${APP_DIR}"
+  compose up -d --remove-orphans
 }
 
 configure_nginx() {
@@ -329,33 +290,8 @@ server {
     server_name ${PRIMARY_DOMAIN} ${SECONDARY_DOMAIN};
     client_max_body_size 20m;
 
-    location /downloads/ {
-        alias ${DOWNLOADS_DIR}/;
-        default_type application/octet-stream;
-        add_header Cache-Control "no-store";
-        add_header Content-Disposition "attachment";
-    }
-
-    location /v1/ {
-        proxy_pass http://127.0.0.1:${API_PORT};
-        proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-
-    location = /health {
-        proxy_pass http://127.0.0.1:${API_PORT}/health;
-        proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-
     location / {
-        proxy_pass http://127.0.0.1:${WEB_PORT};
+        proxy_pass http://127.0.0.1:${APP_PORT};
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection \$connection_upgrade;
@@ -363,6 +299,7 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
     }
 }
 EOF
@@ -406,11 +343,25 @@ configure_tls() {
 }
 
 run_healthchecks() {
-  log "Validando API"
-  wait_for_http "API" "http://127.0.0.1:${API_PORT}/health" "revendeo-api.service" 30
+  local attempt
 
-  log "Validando painel web"
-  wait_for_http "painel web" "http://127.0.0.1:${WEB_PORT}" "revendeo-web.service" 30
+  log "Validando proxy interno do stack"
+  wait_for_http "proxy interno" "http://127.0.0.1:${APP_PORT}/health" "nginx" 30
+  wait_for_http "painel web interno" "http://127.0.0.1:${APP_PORT}" "web" 30
+
+  log "Validando roteamento publico do nginx da VPS"
+  for ((attempt = 1; attempt <= 30; attempt++)); do
+    if curl --fail --silent --show-error -H "Host: ${PRIMARY_DOMAIN}" http://127.0.0.1/health >/dev/null; then
+      return
+    fi
+
+    sleep 2
+  done
+
+  systemctl --no-pager --full status nginx || true
+  dump_service_diagnostics "nginx"
+  echo "Timeout aguardando o nginx da VPS rotear a aplicacao."
+  exit 1
 }
 
 main() {
@@ -418,12 +369,14 @@ main() {
 
   require_root
   ensure_base_packages
-  ensure_node
+  ensure_docker
   ensure_env_file
   ensure_downloads_dir
-  ensure_local_postgres
-  build_apps
-  configure_services
+  stop_legacy_services
+  start_local_postgres
+  build_images
+  apply_database_schema
+  start_stack
   configure_nginx
   configure_tls
   run_healthchecks

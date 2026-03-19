@@ -13,7 +13,8 @@ import { requireAuth } from "./lib/auth";
 
 export async function createServer() {
   const app = Fastify({
-    logger: true
+    logger: true,
+    trustProxy: true
   });
 
   await app.register(cookie);

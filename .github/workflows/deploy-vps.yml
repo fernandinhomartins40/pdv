@@ -276,8 +276,7 @@ jobs:
             chmod +x scripts/install-vps.sh scripts/deploy-vps.sh
             PRIMARY_DOMAIN=revendeo.com.br \
             SECONDARY_DOMAIN=www.revendeo.com.br \
-            WEB_PORT=3040 \
-            API_PORT=3041 \
+            APP_PORT=3040 \
             DATABASE_URL="${DATABASE_URL}" \
             LETSENCRYPT_EMAIL="${LETSENCRYPT_EMAIL}" \
             bash scripts/install-vps.sh
