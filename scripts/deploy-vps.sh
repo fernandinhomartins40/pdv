@@ -158,21 +158,109 @@ require_root() {
   fi
 }
 
+package_installed() {
+  dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q '^install ok installed$'
+}
+
+package_has_candidate() {
+  local candidate
+
+  candidate="$(apt-cache policy "$1" 2>/dev/null | awk '/Candidate:/ { print $2 }')"
+  [[ -n "${candidate}" && "${candidate}" != "(none)" ]]
+}
+
 ensure_base_packages() {
-  local -a packages=(curl ca-certificates git nginx docker.io)
+  local -a packages=(curl ca-certificates git nginx)
 
   log "Instalando dependencias de sistema"
   disable_redundant_ubuntu_mirror_file
   normalize_apt_sources
   apt_update_with_recovery
 
-  if apt-cache show docker-compose-plugin >/dev/null 2>&1; then
-    packages+=(docker-compose-plugin)
-  elif apt-cache show docker-compose-v2 >/dev/null 2>&1; then
-    packages+=(docker-compose-v2)
+  apt-get install -y "${packages[@]}"
+}
+
+ensure_docker_packages() {
+  local docker_family=""
+  local -a packages=()
+
+  if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    log "Docker e Docker Compose ja estao disponiveis"
+    return
   fi
 
-  apt-get install -y "${packages[@]}"
+  if package_installed docker-ce || package_installed docker-ce-cli || package_installed containerd.io; then
+    docker_family="official"
+  elif package_installed docker.io || package_installed docker-compose-v2; then
+    docker_family="ubuntu"
+  elif package_has_candidate docker.io || package_has_candidate docker-compose-v2; then
+    docker_family="ubuntu"
+  elif package_has_candidate docker-ce; then
+    docker_family="official"
+  else
+    echo "Nenhum pacote Docker suportado foi encontrado nos repositorios APT."
+    exit 1
+  fi
+
+  case "${docker_family}" in
+    ubuntu)
+      log "Garantindo Docker via pacotes Ubuntu"
+
+      if ! command -v docker >/dev/null 2>&1 && ! package_installed docker.io; then
+        packages+=(docker.io)
+      fi
+
+      if ! docker compose version >/dev/null 2>&1; then
+        if package_has_candidate docker-compose-v2; then
+          packages+=(docker-compose-v2)
+        elif package_has_candidate docker-compose-plugin && ! package_has_candidate docker-ce; then
+          packages+=(docker-compose-plugin)
+        fi
+      fi
+      ;;
+    official)
+      log "Garantindo Docker via repositorio oficial"
+
+      if package_installed containerd && ! package_installed containerd.io; then
+        log "Removendo pacote containerd do Ubuntu para evitar conflito com containerd.io"
+        apt-get remove -y containerd
+      fi
+
+      if ! package_installed docker-ce; then
+        packages+=(docker-ce)
+      fi
+
+      if ! package_installed docker-ce-cli; then
+        packages+=(docker-ce-cli)
+      fi
+
+      if ! package_installed containerd.io; then
+        packages+=(containerd.io)
+      fi
+
+      if package_has_candidate docker-buildx-plugin && ! package_installed docker-buildx-plugin; then
+        packages+=(docker-buildx-plugin)
+      fi
+
+      if ! docker compose version >/dev/null 2>&1 && package_has_candidate docker-compose-plugin; then
+        packages+=(docker-compose-plugin)
+      fi
+      ;;
+  esac
+
+  if ((${#packages[@]} > 0)); then
+    apt-get install -y "${packages[@]}"
+  fi
+
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "Docker nao esta disponivel apos a instalacao."
+    exit 1
+  fi
+
+  if ! docker compose version >/dev/null 2>&1; then
+    echo "docker compose nao esta disponivel apos a instalacao."
+    exit 1
+  fi
 }
 
 ensure_env_file() {
@@ -369,6 +457,7 @@ main() {
 
   require_root
   ensure_base_packages
+  ensure_docker_packages
   ensure_docker
   ensure_env_file
   ensure_downloads_dir
