@@ -27,7 +27,7 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=build /app /app
-RUN chown -R node:node /app /pnpm
+RUN mkdir -p /pnpm && chown -R node:node /app /pnpm
 
 USER node
 
@@ -41,7 +41,7 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=build /app /app
-RUN chown -R node:node /app /pnpm
+RUN mkdir -p /pnpm && chown -R node:node /app /pnpm
 
 USER node
 
