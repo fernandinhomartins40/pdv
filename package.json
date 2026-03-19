@@ -11,7 +11,8 @@
     "db:generate": "pnpm --filter @pdv/database prisma:generate",
     "db:migrate": "pnpm --filter @pdv/database prisma:migrate",
     "db:deploy": "pnpm --filter @pdv/database prisma:deploy",
-    "db:push": "pnpm --filter @pdv/database prisma:push"
+    "db:push": "pnpm --filter @pdv/database prisma:push",
+    "db:seed:test-users": "pnpm --filter @pdv/api seed:test-users"
   },
   "devDependencies": {
     "turbo": "^2.5.0",
