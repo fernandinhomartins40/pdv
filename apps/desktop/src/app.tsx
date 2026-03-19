@@ -762,8 +762,8 @@ export function App() {
               <div className="match-strip">
                 <div className="match-strip-header">
                   <div>
-                    <strong>Sugestoes rapidas</strong>
-                    <span>Deslize na horizontal ou use as setas para lancar itens mais rapido.</span>
+                    <strong>Sugestões rapidas</strong>
+                    <span>Deslize na horizontal ou use as setas para lançar itens mais rápido.</span>
                   </div>
                   <div className="match-nav">
                     <button type="button" className="match-nav-button" onClick={() => scrollMatchCarousel("left")} aria-label="Rolar produtos para a esquerda">
@@ -800,11 +800,11 @@ export function App() {
                 <span>Loja/Caixa: {settings.storeId}</span>
                 <span>Operador: {operator.name}</span>
                 <span>Documento: {receiptPreviewNumber}</span>
-                <span>Emissao: {formatDateTime(saleStartedAt)}</span>
+                <span>Emissão: {formatDateTime(saleStartedAt)}</span>
               </div>
               <div className="sale-table-header">
                 <span>Item</span>
-                <span>Descricao</span>
+                <span>Descrição</span>
                 <span>Dados</span>
                 <span>Unit.</span>
                 <span>Valor Total</span>
@@ -879,7 +879,7 @@ export function App() {
                 </div>
                 <div className="receipt-divider dashed" />
                 <div className="receipt-section">
-                  <span className="receipt-section-label">Informacoes gerais</span>
+                  <span className="receipt-section-label">Informações gerais</span>
                   <div className="receipt-notes">
                     <span>Caixa: {cashSessionOpen ? "ABERTO" : "FECHADO"}</span>
                     <span>Sync: {lastSyncError ? "COM ALERTA" : "OPERACIONAL"}</span>
@@ -901,8 +901,8 @@ export function App() {
                   <h3>{selectedItem ? selectedItem.productName : "Aguardando lancamento"}</h3>
                   <p>
                     {selectedItem
-                      ? `Linha ${String(selectedItemIndex).padStart(2, "0")} pronta para ajuste rapido no painel de funcoes.`
-                      : "Lance um produto para visualizar codigo, unidade, quantidade e valor nesta area."}
+                      ? `Linha ${String(selectedItemIndex).padStart(2, "0")} pronta para ajuste rápido no painel de funções.`
+                      : "Lance um produto para visualizar código, unidade, quantidade e valor nesta área."}
                   </p>
                 </div>
                 <span className={`item-focus-badge ${selectedItem ? "active" : "idle"}`}>
@@ -983,8 +983,8 @@ export function App() {
                 </>
               ) : (
                 <div className="empty-focus-state">
-                  <strong>Painel pronto para edicao rapida</strong>
-                  <span>Quando um item entrar na venda, este bloco mostra codigo, unidade, quantidade e valor sem depender de uma grade interativa.</span>
+                  <strong>Painel pronto para edição rápida</strong>
+                  <span>Quando um item entrar na venda, este bloco mostra código, unidade, quantidade e valor sem depender de uma grade interativa.</span>
                 </div>
               )}
             </Card>
@@ -1215,7 +1215,7 @@ export function App() {
                 <input value={settingsDraft.terminalId} onChange={(event) => updateSettingsDraft("terminalId", event.target.value)} />
               </label>
               <label className="settings-field" style={{ gridColumn: "1 / -1" }}>
-                <span>Token da sessÃ£o cloud</span>
+                <span>Token da sessão cloud</span>
                 <input
                   value={settingsDraft.sessionToken}
                   onChange={(event) => updateSettingsDraft("sessionToken", event.target.value)}

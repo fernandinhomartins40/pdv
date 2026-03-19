@@ -14,7 +14,7 @@ export default function ImportacaoXmlPage() {
         ]}
         rows={[
           ["NF-e 352603...", "Processada", "38 itens", "Ctrl+I"],
-          ["NF-e 352604...", "Aguardando revisao", "12 itens", "Ctrl+R"],
+          ["NF-e 352604...", "Aguardando revisão", "12 itens", "Ctrl+R"],
           ["NF-e 352605...", "Erro de GTIN", "07 itens", "Ctrl+E"]
         ]}
       />

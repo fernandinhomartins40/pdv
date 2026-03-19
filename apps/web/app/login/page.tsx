@@ -6,8 +6,8 @@ export default function LoginPage() {
     <main className="auth-shell">
       <section className="auth-aside">
         <span className="landing-kicker">Entrar</span>
-        <h1>Continue de onde sua operacao parou.</h1>
-        <p>Use sua conta para acessar empresas, lojas e PDVs vinculados ao seu usuario.</p>
+        <h1>Continue de onde sua operação parou.</h1>
+        <p>Use sua conta para acessar empresas, lojas e PDVs vinculados ao seu usuário.</p>
         <div className="auth-aside-links">
           <Link href="/">Voltar para a landing</Link>
           <Link href="/registro">Criar conta</Link>

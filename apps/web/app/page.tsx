@@ -20,29 +20,29 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../co
 const proof = [
   { value: "Multiempresa", label: "uma conta pode operar varias lojas e caixas" },
   { value: "Offline-first", label: "o caixa continua vendendo mesmo sem internet" },
-  { value: "Cloud + desktop", label: "retaguarda web e operacao de PDV no desktop" }
+  { value: "Cloud + desktop", label: "retaguarda web e operação de PDV no desktop" }
 ];
 
 const pillars = [
   {
     icon: Building2,
     title: "Estrutura para quem opera mais de uma unidade",
-    description: "Centralize matriz, filial, franquia e equipes sem misturar contexto de operacao."
+    description: "Centralize matriz, filial, franquia e equipes sem misturar contexto de operação."
   },
   {
     icon: WifiOff,
     title: "PDV pronto para o mundo real",
-    description: "Venda localmente, sincronize depois e mantenha a loja rodando quando a conexao falha."
+    description: "Venda localmente, sincronize depois e mantenha a loja rodando quando a conexão falha."
   },
   {
     icon: ShieldCheck,
     title: "Acesso por conta, loja e terminal",
-    description: "Cada usuario entra no contexto certo para vender, acompanhar ou administrar."
+    description: "Cada usuário entra no contexto certo para vender, acompanhar ou administrar."
   }
 ];
 
 const operationalFlow = [
-  "Conta e autenticacao centralizadas",
+  "Conta e autenticação centralizadas",
   "Empresa e lojas organizadas por tenant",
   "PDVs vinculados a cada unidade",
   "Equipe, estoque, venda e caixa no mesmo fluxo"
@@ -65,8 +65,8 @@ const modules = [
   },
   {
     icon: Cloud,
-    eyebrow: "Gestao",
-    title: "Painel online para acompanhar a operacao e escalar para varias lojas.",
+    eyebrow: "Gestão",
+    title: "Painel online para acompanhar a operação e escalar para várias lojas.",
     tone:
       "border border-white/10 bg-[linear-gradient(145deg,#101726,#24194e_58%,#6a237e)] text-white shadow-float"
   }
@@ -80,8 +80,8 @@ const onboarding = [
   },
   {
     step: "02",
-    title: "Estruture a operacao",
-    description: "Cadastre a primeira loja, os primeiros usuarios e o primeiro terminal."
+    title: "Estruture a operação",
+    description: "Cadastre a primeira loja, os primeiros usuários e o primeiro terminal."
   },
   {
     step: "03",
@@ -111,7 +111,7 @@ export default function LandingPage() {
               </div>
               <div className="flex flex-col">
                 <span className="font-display text-lg leading-none">Revendeo</span>
-                <span className="text-xs uppercase tracking-[0.24em] text-[#667085]">pdv saas multiusuario</span>
+                <span className="text-xs uppercase tracking-[0.24em] text-[#667085]">pdv saas multiusuário</span>
               </div>
             </div>
 
@@ -120,7 +120,7 @@ export default function LandingPage() {
                 Produto
               </a>
               <a href="#operacao" className="transition hover:text-[#111827]">
-                Operacao
+                Operação
               </a>
               <a href="#entrada" className="transition hover:text-[#111827]">
                 Entrada
@@ -135,15 +135,15 @@ export default function LandingPage() {
           <div className="grid gap-12 pt-14 lg:grid-cols-[1.02fr_0.98fr] lg:items-start">
             <div className="flex flex-col gap-8">
               <Badge variant="accent" className="w-fit border-0">
-                SaaS para quem vende na loja e governa a operacao inteira
+                SaaS para quem vende na loja e governa a operação inteira
               </Badge>
 
               <div className="space-y-6">
                 <h1 className="max-w-4xl font-display text-5xl leading-[0.92] tracking-[-0.05em] text-[#111827] md:text-7xl">
-                  Seu varejo nao precisa escolher entre caixa rapido e controle serio.
+                  Seu varejo não precisa escolher entre caixa rápido e controle sério.
                 </h1>
                 <p className="max-w-2xl text-lg leading-8 text-[#667085] md:text-xl">
-                  Revendeo junta retaguarda cloud, autenticacao, multiempresa e PDV desktop em uma experiencia pensada
+                  Revendeo junta retaguarda cloud, autenticação, multiempresa e PDV desktop em uma experiência pensada
                   para quem opera mais de uma loja, mais de um caixa e mais de uma equipe.
                 </p>
               </div>
@@ -185,18 +185,18 @@ export default function LandingPage() {
                 <div className="mb-4 flex flex-col gap-4 border-b border-[#101726]/8 pb-4">
                   <div className="space-y-3">
                     <Badge variant="outline" className="w-fit border-[#101726]/8 bg-white/70 text-[#111827]">
-                      Visao da operacao
+                      Visão da operação
                     </Badge>
                     <p className="max-w-2xl text-sm leading-6 text-[#667085]">
-                      Conta, lojas, terminais e vendas organizados em um fluxo unico para retaguarda e PDV, com leitura
-                      clara do que esta acontecendo em cada unidade.
+                      Conta, lojas, terminais e vendas organizados em um fluxo único para retaguarda e PDV, com leitura
+                      clara do que está acontecendo em cada unidade.
                     </p>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-3">
                     <div className="rounded-[1.4rem] border border-[#101726]/8 bg-white/82 px-4 py-3">
                       <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#667085]">Conta</span>
-                      <strong className="mt-2 block text-base text-[#111827]">Gestao centralizada</strong>
+                      <strong className="mt-2 block text-base text-[#111827]">Gestão centralizada</strong>
                     </div>
                     <div className="rounded-[1.4rem] border border-[#101726]/8 bg-white/82 px-4 py-3">
                       <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#667085]">Lojas</span>
@@ -204,20 +204,20 @@ export default function LandingPage() {
                     </div>
                     <div className="rounded-[1.4rem] border border-[#101726]/8 bg-white/82 px-4 py-3">
                       <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#667085]">PDV</span>
-                      <strong className="mt-2 block text-base text-[#111827]">Operacao sincronizada</strong>
+                      <strong className="mt-2 block text-base text-[#111827]">Operação sincronizada</strong>
                     </div>
                   </div>
                 </div>
 
                 <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
                   <div className="rounded-[2.2rem] bg-[linear-gradient(145deg,#101726,#24194e_58%,#6a237e)] p-5 text-white shadow-float">
-                    <div className="flex items-center justify-between border-b border-dashed border-white/12 pb-3">
-                      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">Operacao ao vivo</span>
+                    <div className="mb-4 flex items-center justify-between gap-3 rounded-[1.35rem] bg-white/8 px-4 py-4">
+                      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">Operação ao vivo</span>
                       <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-[#6cc8ff]">
                         3 lojas sincronizadas
                       </span>
                     </div>
-                    <div className="space-y-3 py-4 text-sm text-white/84">
+                    <div className="space-y-3 text-sm text-white/84">
                       {operationalFlow.map((line) => (
                         <div key={line} className="flex items-start gap-3">
                           <CheckCircle2 className="mt-0.5 size-4 text-[#6cc8ff]" />
@@ -225,16 +225,16 @@ export default function LandingPage() {
                         </div>
                       ))}
                     </div>
-                    <div className="grid gap-3 border-t border-dashed border-white/12 pt-4 sm:grid-cols-3">
-                      <div className="rounded-[1.2rem] bg-white/8 px-3 py-3">
+                    <div className="mt-5 grid gap-3 border-t border-white/10 pt-4 sm:grid-cols-3">
+                      <div className="rounded-[1.2rem] border border-white/10 bg-white/8 px-3 py-3">
                         <span className="block text-[11px] uppercase tracking-[0.16em] text-white/56">Loja Centro</span>
                         <strong className="mt-2 block text-sm">Caixa 03 ativo</strong>
                       </div>
-                      <div className="rounded-[1.2rem] bg-white/8 px-3 py-3">
+                      <div className="rounded-[1.2rem] border border-white/10 bg-white/8 px-3 py-3">
                         <span className="block text-[11px] uppercase tracking-[0.16em] text-white/56">Loja Norte</span>
                         <strong className="mt-2 block text-sm">Sync em dia</strong>
                       </div>
-                      <div className="rounded-[1.2rem] bg-white/8 px-3 py-3">
+                      <div className="rounded-[1.2rem] border border-white/10 bg-white/8 px-3 py-3">
                         <span className="block text-[11px] uppercase tracking-[0.16em] text-white/56">Loja Oeste</span>
                         <strong className="mt-2 block text-sm">Equipe validada</strong>
                       </div>
@@ -257,7 +257,7 @@ export default function LandingPage() {
                           Loja
                         </div>
                         <div className="rounded-[1.25rem] bg-[linear-gradient(135deg,#1ea7ff,#8758e2_58%,#d42eb5)] px-4 py-3 text-sm font-semibold text-white">
-                          PDV em operacao
+                          PDV em operação
                         </div>
                       </div>
                     </div>
@@ -273,7 +273,7 @@ export default function LandingPage() {
                         </div>
                         <div className="flex items-center gap-3">
                           <Users2 className="size-4 text-[#8758e2]" />
-                          <span>Usuarios com acesso ao contexto certo</span>
+                          <span>Usuários com acesso ao contexto certo</span>
                         </div>
                         <div className="flex items-center gap-3">
                           <Boxes className="size-4 text-[#8758e2]" />
@@ -300,14 +300,14 @@ export default function LandingPage() {
         <div className="mx-auto grid max-w-7xl gap-10 px-6 py-20 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
           <div className="space-y-6">
             <Badge variant="outline" className="w-fit border-white/10 bg-white/[0.08] text-white">
-              Produto para operacao real
+              Produto para operação real
             </Badge>
             <h2 className="font-display text-4xl leading-tight tracking-[-0.04em] md:text-6xl">
-              Nao e so um sistema de caixa. E a arquitetura da sua operacao.
+              Não é só um sistema de caixa. É a arquitetura da sua operação.
             </h2>
             <p className="max-w-xl text-lg leading-8 text-white/74">
-              A proposta da Revendeo e simples: dar velocidade na ponta sem perder controle no topo. O que entra em
-              produto, usuario, loja e terminal continua coerente ate a venda.
+              A proposta da Revendeo é simples: dar velocidade na ponta sem perder controle no topo. O que entra em
+              produto, usuário, loja e terminal continua coerente até a venda.
             </p>
           </div>
 
@@ -343,13 +343,13 @@ export default function LandingPage() {
           <Card className="overflow-hidden rounded-[2.5rem] border-0 bg-[linear-gradient(145deg,#101726,#23194d_56%,#d42eb5)] text-white shadow-float">
             <CardHeader className="space-y-5">
               <Badge variant="outline" className="w-fit border-white/14 bg-white/10 text-white">
-                Entrada rapida
+                Entrada rápida
               </Badge>
               <CardTitle className="text-4xl text-white md:text-5xl">
-                Do primeiro login ao primeiro PDV ativo sem enrolacao.
+                Do primeiro login ao primeiro PDV ativo sem enrolação.
               </CardTitle>
               <CardDescription className="max-w-md text-base leading-7 text-white/74">
-                A landing precisa vender clareza. O produto precisa entregar velocidade de entrada. Os dois estao alinhados
+                A landing precisa vender clareza. O produto precisa entregar velocidade de entrada. Os dois estão alinhados
                 aqui.
               </CardDescription>
             </CardHeader>
@@ -401,10 +401,10 @@ export default function LandingPage() {
                 Pronto para entrar
               </Badge>
               <h2 className="max-w-3xl font-display text-4xl leading-[0.94] tracking-[-0.04em] md:text-6xl">
-                Se a operacao e seria, a entrada no sistema tambem precisa ser.
+                Se a operação é séria, a entrada no sistema também precisa ser.
               </h2>
               <p className="max-w-2xl text-lg leading-8 text-white/78">
-                Entre no painel e avance para o contexto certo. A landing vende o produto. O login abre a operacao.
+                Entre no painel e avance para o contexto certo. A landing vende o produto. O login abre a operação.
               </p>
             </div>
 

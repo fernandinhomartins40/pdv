@@ -7,10 +7,10 @@ export default function RegisterPage() {
       <section className="auth-aside">
         <span className="landing-kicker">Onboarding</span>
         <h1>Crie sua conta e saia com empresa, loja e primeiro PDV prontos.</h1>
-        <p>Esse fluxo ja provisiona o ambiente base para o painel web e para o desktop sincronizado.</p>
+        <p>Esse fluxo já provisiona o ambiente base para o painel web e para o desktop sincronizado.</p>
         <div className="auth-aside-links">
           <Link href="/">Conhecer produto</Link>
-          <Link href="/login">Ja tenho conta</Link>
+          <Link href="/login">Já tenho conta</Link>
         </div>
       </section>
       <section className="auth-card">

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 
 const checks = [
   "Instalador oficial hospedado na infraestrutura da Revendeo",
-  "Arquivo substituido automaticamente quando houver nova versao do desktop",
+  "Arquivo substituído automaticamente quando houver nova versão do desktop",
   "Link fixo para distribuir ao cliente sem trocar URL a cada deploy"
 ];
 
@@ -28,7 +28,7 @@ export default function DownloadPage() {
             <div>
               <h1 className="font-display text-4xl tracking-[-0.04em] md:text-5xl">Baixe o instalador do PDV Revendeo.</h1>
               <p className="mt-3 max-w-2xl text-base leading-7 text-[#667085]">
-                Esta pagina centraliza o executavel mais recente do desktop para instalacao em caixas e terminais Windows.
+                Esta página centraliza o executável mais recente do desktop para instalação em caixas e terminais Windows.
               </p>
             </div>
           </div>
@@ -44,10 +44,10 @@ export default function DownloadPage() {
               <Badge variant="outline" className="w-fit border-white/15 bg-white/10 text-white">
                 Instalador Windows
               </Badge>
-              <CardTitle className="text-4xl text-white md:text-5xl">Um link fixo para colocar o PDV em operacao.</CardTitle>
+              <CardTitle className="text-4xl text-white md:text-5xl">Um link fixo para colocar o PDV em operação.</CardTitle>
               <CardDescription className="max-w-xl text-base leading-7 text-white/80">
-                O executavel publicado aqui e atualizado pelo workflow de deploy sempre que houver mudancas relevantes no app desktop
-                ou quando ainda nao existir instalador hospedado na VPS.
+                O executável publicado aqui é atualizado pelo workflow de deploy sempre que houver mudanças relevantes no app desktop
+                ou quando ainda não existir instalador hospedado na VPS.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4 sm:flex-row">
@@ -69,9 +69,9 @@ export default function DownloadPage() {
                 <div className="flex size-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#1ea7ff,#8758e2_58%,#d42eb5)]">
                   <LaptopMinimal className="size-5 text-white" />
                 </div>
-                <CardTitle className="text-2xl">Pensado para distribuicao simples</CardTitle>
+                <CardTitle className="text-2xl">Pensado para distribuição simples</CardTitle>
                 <CardDescription className="text-base leading-7">
-                  O arquivo publicado usa um nome estavel, sem precisar reenviar uma URL diferente a cada release.
+                  O arquivo publicado usa um nome estável, sem precisar reenviar uma URL diferente a cada release.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -83,7 +83,7 @@ export default function DownloadPage() {
                 </div>
                 <CardTitle className="text-2xl">Fluxo controlado pelo deploy</CardTitle>
                 <CardDescription className="text-base leading-7">
-                  O job remove o executavel antigo da VPS antes de publicar o novo, mantendo apenas a versao vigente para download.
+                  O job remove o executável antigo da VPS antes de publicar o novo, mantendo apenas a versão vigente para download.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -95,7 +95,7 @@ export default function DownloadPage() {
             <Badge variant="outline" className="w-fit">
               O que este link garante
             </Badge>
-            <CardTitle className="text-3xl">Distribuicao previsivel para clientes e equipes de implantacao.</CardTitle>
+            <CardTitle className="text-3xl">Distribuição previsível para clientes e equipes de implantação.</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-3">
             {checks.map((item) => (

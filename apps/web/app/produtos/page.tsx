@@ -43,10 +43,10 @@ export default async function ProdutosPage() {
     <AppPageShell>
       <ModulePage
         title="Produtos"
-        description="Cadastro manual, precos, GTIN, NCM, CFOP e publicacao sincronizada entre nuvem e PDV local."
+        description="Cadastro manual, preços, GTIN, NCM, CFOP e publicação sincronizada entre nuvem e PDV local."
         stats={[
           { label: "Produtos Ativos", value: String(activeCount), accent: "#6B2EFF" },
-          { label: "Preco Medio", value: money(averagePrice), accent: "#00B6C9" },
+          { label: "Preço Médio", value: money(averagePrice), accent: "#00B6C9" },
           { label: "Sem GTIN", value: String(missingBarcode), accent: "#FF7A1A" }
         ]}
         rows={products.map((product) => [

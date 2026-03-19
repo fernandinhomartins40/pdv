@@ -91,11 +91,11 @@ export class LocalDatabase {
     const operatorChanged = currentSettings.operatorId !== normalized.operatorId;
 
     if ((contextChanged || operatorChanged) && this.isCashSessionOpen()) {
-      throw new Error("Feche o caixa antes de alterar organizacao, loja ou operador.");
+      throw new Error("Feche o caixa antes de alterar organização, loja ou operador.");
     }
 
     if (contextChanged && this.hasBlockingPendingOperations()) {
-      throw new Error("Sincronize ou resolva as pendencias antes de trocar organizacao ou loja.");
+      throw new Error("Sincronize ou resolva as pendências antes de trocar organização ou loja.");
     }
 
     this.writeState("settings.apiBaseUrl", normalized.apiBaseUrl);

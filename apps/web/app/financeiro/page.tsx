@@ -6,7 +6,7 @@ export default function FinanceiroPage() {
     <AppPageShell>
       <ModulePage
         title="Financeiro"
-        description="Contas a pagar, contas a receber, conciliacao e visao consolidada por forma de pagamento."
+        description="Contas a pagar, contas a receber, conciliação e visão consolidada por forma de pagamento."
         stats={[
           { label: "A Receber", value: "R$ 28.430", accent: "#31C65B" },
           { label: "A Pagar", value: "R$ 17.920", accent: "#EF4F5F" },

@@ -15,7 +15,7 @@ const bodyFont = IBM_Plex_Sans({
 
 export const metadata: Metadata = {
   title: "Revendeo",
-  description: "SaaS de gestao comercial com painel cloud e PDV desktop offline-first"
+  description: "SaaS de gestão comercial com painel cloud e PDV desktop offline-first"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

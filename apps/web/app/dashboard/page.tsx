@@ -89,7 +89,7 @@ export default async function DashboardPage() {
     pendingOrders,
     tables: session.stores.slice(0, 3).map((store) => ({
       label: store.code,
-      status: store.id === session.activeStoreId ? "Ativa" : "Disponivel",
+      status: store.id === session.activeStoreId ? "Ativa" : "Disponível",
       totalAmount: store.id === session.activeStoreId ? Number(today._sum.totalAmount ?? 0) : 0
     })),
     stockAlerts: stockAlerts

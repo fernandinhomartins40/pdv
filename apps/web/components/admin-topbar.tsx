@@ -20,11 +20,11 @@ export function AdminTopbar({ session }: AdminTopbarProps) {
       <div className="topbar-meta">
         <span className="topbar-chip">
           <ShieldCheck size={16} />
-          {session.emailVerified ? "Conta verificada" : "Verificacao pendente"}
+          {session.emailVerified ? "Conta verificada" : "Verificação pendente"}
         </span>
         <span className="topbar-chip">
           <Cloud size={16} />
-          Sessao expira em {new Date(session.session.expiresAt).toLocaleDateString("pt-BR")}
+          Sessão expira em {new Date(session.session.expiresAt).toLocaleDateString("pt-BR")}
         </span>
         <span className="topbar-chip">
           <UserCircle2 size={16} />
@@ -32,7 +32,7 @@ export function AdminTopbar({ session }: AdminTopbarProps) {
         </span>
         <span className="topbar-chip">
           <Bell size={16} />
-          {session.terminals.length} PDV(s) disponivel(is)
+          {session.terminals.length} PDV(s) disponível(is)
         </span>
       </div>
 

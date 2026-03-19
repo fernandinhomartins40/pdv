@@ -27,7 +27,7 @@ async function requireActiveMembership() {
   });
 
   if (!membership) {
-    throw new Error("Membro da organizacao nao encontrado.");
+    throw new Error("Membro da organização não encontrado.");
   }
 
   return {
@@ -116,7 +116,7 @@ export async function createTerminalAction(formData: FormData) {
   });
 
   if (!store) {
-    throw new Error("Loja nao encontrada.");
+    throw new Error("Loja não encontrada.");
   }
 
   await prisma.pdvTerminal.create({

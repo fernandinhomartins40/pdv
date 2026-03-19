@@ -1,7 +1,7 @@
 import { Badge, Card, MetricCard } from "@pdv/ui";
 import type { DashboardSnapshot } from "@pdv/types";
 
-const categories = ["Venda consolidada", "Operacao do dia", "Estoque critico", "Caixa", "Sync"];
+const categories = ["Venda consolidada", "Operação do dia", "Estoque crítico", "Caixa", "Sync"];
 
 function money(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });

@@ -94,7 +94,7 @@ export function AuthForm({ mode, token }: AuthFormProps) {
       };
 
       if (!response.ok) {
-        throw new Error(data.message || "Nao foi possivel concluir a operacao.");
+        throw new Error(data.message || "Não foi possível concluir a operação.");
       }
 
       if (mode === "login" || mode === "register") {
@@ -108,13 +108,13 @@ export function AuthForm({ mode, token }: AuthFormProps) {
       }
 
       if (mode === "forgot") {
-        setSuccess("Se o e-mail existir, enviamos as instrucoes de redefinicao.");
+        setSuccess("Se o e-mail existir, enviamos as instruções de redefinição.");
         setPreviewUrl(data.reset?.url ?? null);
         return;
       }
 
       if (mode === "reset") {
-        setSuccess("Senha redefinida. Voce ja pode entrar.");
+        setSuccess("Senha redefinida. Você já pode entrar.");
         router.push("/login");
         return;
       }
@@ -144,7 +144,7 @@ export function AuthForm({ mode, token }: AuthFormProps) {
           </label>
           <label className="auth-field">
             <span>Senha</span>
-            <input name="password" type="password" minLength={8} placeholder="Minimo de 8 caracteres" required />
+            <input name="password" type="password" minLength={8} placeholder="Mínimo de 8 caracteres" required />
           </label>
           <label className="auth-field">
             <span>Empresa</span>
@@ -216,7 +216,7 @@ export function AuthForm({ mode, token }: AuthFormProps) {
 
       {mode === "register" ? (
         <div className="auth-links">
-          <Link href="/login">Ja tenho conta</Link>
+          <Link href="/login">Já tenho conta</Link>
         </div>
       ) : null}
     </form>
