@@ -13,27 +13,27 @@ type ButtonVariant =
   | "danger";
 
 const backgroundByVariant: Record<ButtonVariant, string> = {
-  primary: `linear-gradient(135deg, ${palette.backgroundStart}, ${palette.backgroundEnd})`,
-  secondary: "rgba(255, 255, 255, 0.14)",
-  success: palette.successDark,
+  primary: palette.gradientBrand,
+  secondary: "rgba(255, 255, 255, 0.82)",
+  success: "linear-gradient(135deg, rgba(43, 193, 116, 0.98), rgba(18, 137, 93, 0.98))",
   cash: palette.cash,
   pix: palette.pix,
   credit: palette.credit,
-  debit: palette.debit,
-  ghost: "transparent",
-  danger: palette.danger
+  debit: "linear-gradient(135deg, var(--color-accent-violet), var(--color-accent-magenta))",
+  ghost: "rgba(255, 255, 255, 0.52)",
+  danger: "rgba(235, 91, 116, 0.14)"
 };
 
 const textByVariant: Record<ButtonVariant, string> = {
   primary: "#FFFFFF",
-  secondary: "#FFFFFF",
+  secondary: palette.text,
   success: "#FFFFFF",
   cash: "#FFFFFF",
   pix: "#FFFFFF",
   credit: "#FFFFFF",
   debit: "#FFFFFF",
-  ghost: "#FFFFFF",
-  danger: "#FFFFFF"
+  ghost: palette.text,
+  danger: palette.danger
 };
 
 export interface ButtonProps extends PropsWithChildren {
@@ -70,14 +70,22 @@ export function Button({
         width: "100%",
         padding: "16px 18px",
         borderRadius: radii.button,
-        border: variant === "ghost" ? `1px solid ${palette.border}` : "none",
+        border:
+          variant === "ghost" || variant === "secondary" || variant === "danger"
+            ? `1px solid ${palette.border}`
+            : "none",
         background: backgroundByVariant[variant],
         color: textByVariant[variant],
         fontWeight: 700,
+        letterSpacing: "-0.01em",
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.6 : 1,
-        boxShadow: variant === "ghost" ? "none" : "0 12px 36px rgba(0, 0, 0, 0.16)",
-        transition: "transform 140ms ease, box-shadow 140ms ease",
+        boxShadow:
+          variant === "ghost" || variant === "danger"
+            ? "none"
+            : "0 16px 42px rgba(38, 70, 115, 0.16)",
+        backdropFilter: variant === "secondary" || variant === "ghost" ? "blur(16px)" : undefined,
+        transition: "transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease",
         ...style
       }}
     >

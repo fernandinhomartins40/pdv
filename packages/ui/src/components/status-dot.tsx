@@ -9,7 +9,7 @@ export function StatusDot({ online }: { online: boolean }) {
         height: 12,
         borderRadius: 999,
         background: online ? palette.cash : palette.offline,
-        boxShadow: online ? "0 0 0 6px rgba(59, 181, 74, 0.2)" : "none"
+        boxShadow: online ? "0 0 0 6px rgba(43, 193, 116, 0.18)" : "none"
       }}
     />
   );

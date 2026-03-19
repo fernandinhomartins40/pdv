@@ -32,7 +32,7 @@ export function DashboardContent({ snapshot }: { snapshot: DashboardSnapshot }) 
             {categories.map((category, index) => (
               <div key={category} className="accordion-item" style={{ gridTemplateColumns: "1fr auto" }}>
                 <strong>{category}</strong>
-                <span style={{ color: index % 2 === 0 ? "#8A4DFF" : "#FF7A1A", fontWeight: 900 }}>+</span>
+                <span style={{ color: index % 2 === 0 ? "#8758E2" : "#D42EB5", fontWeight: 900 }}>+</span>
               </div>
             ))}
           </div>
@@ -54,9 +54,9 @@ export function DashboardContent({ snapshot }: { snapshot: DashboardSnapshot }) 
           <div className="table-list">
             {snapshot.tables.map((table) => (
               <div key={table.label} className="table-item">
-                <strong style={{ color: "#6B2EFF", fontSize: 32 }}>{table.label}</strong>
+                <strong style={{ color: "#8758E2", fontSize: 32 }}>{table.label}</strong>
                 <div>
-                  <strong style={{ display: "block", color: table.status === "Livres" ? "#32C450" : "#6B2EFF" }}>{table.status}</strong>
+                  <strong style={{ display: "block", color: table.status === "Livres" ? "#2BC174" : "#D42EB5" }}>{table.status}</strong>
                   <span className="muted">Volume monitorado</span>
                 </div>
                 <strong style={{ color: table.totalAmount > 0 ? "#31C65B" : "#A9A0B8" }}>{money(table.totalAmount)}</strong>

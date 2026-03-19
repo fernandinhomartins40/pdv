@@ -40,7 +40,10 @@ export function ModulePage({ title, description, stats, rows }: ModulePageProps)
 
       <Card className="surface-card">
         <div className="module-table">
-          <div className="module-row" style={{ background: "linear-gradient(180deg, #5923a3, #4a0b8a)", color: "white", fontWeight: 700 }}>
+          <div
+            className="module-row"
+            style={{ background: "linear-gradient(135deg, #101726, #24194e 58%, #d42eb5)", color: "white", fontWeight: 700 }}
+          >
             <span>Descrição</span>
             <span>Status</span>
             <span>Valor</span>

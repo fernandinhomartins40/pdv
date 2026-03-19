@@ -695,6 +695,7 @@ export function App() {
       <header className="pdv-header">
         <div className="brand-block">
           <div className="brand-logo">SIGE Lite</div>
+          <span className="brand-tag">desktop operacional</span>
         </div>
         <div className="header-actions">
           <span className="header-user">

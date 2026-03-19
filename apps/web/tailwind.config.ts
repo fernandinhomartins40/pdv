@@ -12,12 +12,12 @@ const config: Config = {
         body: ["var(--font-body)", "sans-serif"]
       },
       boxShadow: {
-        ink: "0 20px 80px rgba(18, 14, 10, 0.14)",
-        float: "0 28px 90px rgba(24, 12, 8, 0.22)"
+        ink: "0 22px 68px rgba(39, 66, 108, 0.14)",
+        float: "0 30px 92px rgba(28, 52, 92, 0.18)"
       },
       backgroundImage: {
         "hero-grid":
-          "linear-gradient(rgba(17, 24, 39, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(17, 24, 39, 0.08) 1px, transparent 1px)"
+          "linear-gradient(rgba(16, 23, 38, 0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(16, 23, 38, 0.06) 1px, transparent 1px)"
       }
     }
   },

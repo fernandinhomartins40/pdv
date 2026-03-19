@@ -13,9 +13,11 @@ export function Card({ children, style, className }: CardProps) {
       style={{
         background: palette.panel,
         borderRadius: radii.card,
+        border: `1px solid ${palette.border}`,
         boxShadow: palette.shadow,
         padding: 24,
         color: palette.text,
+        backdropFilter: "blur(18px)",
         ...style
       }}
     >
