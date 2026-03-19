@@ -177,88 +177,105 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="relative min-h-[660px]" id="produto">
-              <div className="pointer-events-none absolute left-2 top-3 h-[320px] w-[330px] rounded-full border-[18px] border-[#1ea7ff] border-b-[#d42eb5] border-l-transparent border-r-[#8758e2] opacity-90" />
-              <div className="pointer-events-none absolute left-[255px] top-[58px] size-16 rounded-full bg-white/82 blur-xl" />
-              <div className="pointer-events-none absolute right-12 top-[280px] size-20 rounded-full bg-[#d42eb5]/16 blur-2xl" />
+            <div className="relative min-h-[560px]" id="produto">
+              <div className="pointer-events-none absolute left-2 top-3 h-[280px] w-[300px] rounded-full border-[18px] border-[#1ea7ff] border-b-[#d42eb5] border-l-transparent border-r-[#8758e2] opacity-90" />
+              <div className="pointer-events-none absolute left-[220px] top-[44px] size-16 rounded-full bg-white/82 blur-xl" />
+              <div className="pointer-events-none absolute right-4 top-[250px] size-24 rounded-full bg-[#d42eb5]/16 blur-2xl" />
 
-              <Card className="relative z-10 ml-auto mt-12 max-w-[430px] overflow-hidden rounded-[2.6rem] border-white/60 bg-white/76 shadow-float backdrop-blur-xl">
-                <CardHeader className="space-y-5">
-                  <Badge variant="outline" className="w-fit border-[#101726]/8 bg-white/70 text-[#111827]">
-                    Visao da operacao
-                  </Badge>
-                  <div className="space-y-3">
-                    <CardTitle className="text-4xl text-[#111827]">Uma camada unica entre conta, loja, PDV e venda.</CardTitle>
-                    <CardDescription className="max-w-lg text-base leading-7 text-[#667085]">
-                      Menos gambiarra entre sistemas, menos dependencia de planilha e mais leitura do que acontece em cada
-                      caixa.
-                    </CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent className="grid gap-4">
-                  <div className="rounded-[2rem] bg-[linear-gradient(145deg,#101726,#24194e_58%,#6a237e)] p-5 text-white shadow-float">
-                    <div className="flex items-center justify-between border-b border-dashed border-white/12 pb-3">
-                      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">Operacao ao vivo</span>
-                      <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-[#6cc8ff]">
-                        3 lojas sincronizadas
+              <div className="relative z-10 mt-8 grid gap-4 xl:grid-cols-[1.12fr_0.88fr]">
+                <Card className="overflow-hidden rounded-[2.4rem] border-white/60 bg-white/78 shadow-float backdrop-blur-xl xl:col-span-2">
+                  <CardContent className="grid gap-6 p-6 md:p-7 xl:grid-cols-[1.02fr_0.98fr] xl:items-end">
+                    <div className="space-y-4">
+                      <Badge variant="outline" className="w-fit border-[#101726]/8 bg-white/70 text-[#111827]">
+                        Visao da operacao
+                      </Badge>
+                      <div className="space-y-3">
+                        <CardTitle className="max-w-xl text-4xl text-[#111827]">
+                          Uma camada unica entre conta, loja, PDV e venda.
+                        </CardTitle>
+                        <CardDescription className="max-w-lg text-base leading-7 text-[#667085]">
+                          Menos gambiarra entre sistemas, menos dependencia de planilha e mais leitura do que acontece em cada
+                          caixa.
+                        </CardDescription>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3 xl:justify-end">
+                      <span className="inline-flex min-h-[42px] items-center rounded-full border border-[#101726]/8 bg-white/80 px-4 text-sm font-semibold text-[#111827]">
+                        Conta centralizada
+                      </span>
+                      <span className="inline-flex min-h-[42px] items-center rounded-full border border-[#101726]/8 bg-white/80 px-4 text-sm font-semibold text-[#111827]">
+                        Tenant por loja
+                      </span>
+                      <span className="inline-flex min-h-[42px] items-center rounded-full border border-[#101726]/8 bg-white/80 px-4 text-sm font-semibold text-[#111827]">
+                        PDV sincronizado
                       </span>
                     </div>
-                    <div className="space-y-3 py-4 text-sm text-white/84">
-                      {operationalFlow.map((line) => (
-                        <div key={line} className="flex items-start gap-3">
-                          <CheckCircle2 className="mt-0.5 size-4 text-[#6cc8ff]" />
-                          <span>{line}</span>
-                        </div>
-                      ))}
+                  </CardContent>
+                </Card>
+
+                <div className="rounded-[2.15rem] bg-[linear-gradient(145deg,#101726,#24194e_58%,#6a237e)] p-5 text-white shadow-float">
+                  <div className="flex items-center justify-between border-b border-dashed border-white/12 pb-3">
+                    <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">Operacao ao vivo</span>
+                    <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-[#6cc8ff]">
+                      3 lojas sincronizadas
+                    </span>
+                  </div>
+                  <div className="space-y-3 py-4 text-sm text-white/84">
+                    {operationalFlow.map((line) => (
+                      <div key={line} className="flex items-start gap-3">
+                        <CheckCircle2 className="mt-0.5 size-4 text-[#6cc8ff]" />
+                        <span>{line}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid gap-2 border-t border-dashed border-white/12 pt-4 text-[11px] text-white/56">
+                    <div className="flex justify-between">
+                      <span>Loja Centro</span>
+                      <span>Caixa 03 ativo</span>
                     </div>
-                    <div className="grid gap-2 border-t border-dashed border-white/12 pt-4 text-[11px] text-white/56">
-                      <div className="flex justify-between">
-                        <span>Loja Centro</span>
-                        <span>Caixa 03 ativo</span>
+                    <div className="flex justify-between">
+                      <span>Loja Norte</span>
+                      <span>Sync em dia</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Loja Oeste</span>
+                      <span>Equipe validada</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-4">
+                  <div className="rounded-[2rem] bg-[linear-gradient(135deg,#1ea7ff,#8758e2_58%,#d42eb5)] p-5 text-white shadow-ink">
+                    <div className="mb-5 inline-flex rounded-full bg-white/14 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em]">
+                      Fluxo comercial
+                    </div>
+                    <p className="max-w-xs font-display text-[2rem] leading-tight tracking-[-0.04em]">
+                      Conta - Empresa - Loja - PDV
+                    </p>
+                  </div>
+
+                  <div className="rounded-[2rem] border border-[#101726]/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(241,246,252,0.98))] p-5 text-[#111827] shadow-ink">
+                    <div className="mb-5 inline-flex rounded-full bg-[#101726] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
+                      Recibo de valor
+                    </div>
+                    <div className="space-y-3 text-sm text-[#667085]">
+                      <div className="flex items-center gap-3">
+                        <Receipt className="size-4 text-[#8758e2]" />
+                        <span>Produtos, estoque e caixa no mesmo ritmo</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Loja Norte</span>
-                        <span>Sync em dia</span>
+                      <div className="flex items-center gap-3">
+                        <Users2 className="size-4 text-[#8758e2]" />
+                        <span>Usuarios com acesso ao contexto certo</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Loja Oeste</span>
-                        <span>Equipe validada</span>
+                      <div className="flex items-center gap-3">
+                        <Boxes className="size-4 text-[#8758e2]" />
+                        <span>Mais lojas sem perder governanca</span>
                       </div>
                     </div>
                   </div>
-
-                  <div className="grid gap-4 sm:grid-cols-[1.02fr_0.98fr]">
-                    <div className="rounded-[2rem] bg-[linear-gradient(135deg,#1ea7ff,#8758e2_58%,#d42eb5)] p-5 text-white shadow-ink">
-                      <div className="mb-7 inline-flex rounded-full bg-white/14 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em]">
-                        Fluxo comercial
-                      </div>
-                      <p className="max-w-xs font-display text-3xl leading-tight tracking-[-0.04em]">
-                        Conta - Empresa - Loja - PDV
-                      </p>
-                    </div>
-
-                    <div className="rounded-[1.8rem] bg-[#101216] p-5 text-white shadow-float">
-                      <div className="mb-5 inline-flex rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
-                        Recibo de valor
-                      </div>
-                      <div className="space-y-3 text-sm text-white/74">
-                        <div className="flex items-center gap-3">
-                          <Receipt className="size-4 text-[#6cc8ff]" />
-                          <span>Produtos, estoque e caixa no mesmo ritmo</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <Users2 className="size-4 text-[#6cc8ff]" />
-                          <span>Usuarios com acesso ao contexto certo</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <Boxes className="size-4 text-[#6cc8ff]" />
-                          <span>Mais lojas sem perder governanca</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -295,8 +312,8 @@ export default function LandingPage() {
                   key={pillar.title}
                   className={
                     index === 0
-                      ? "rounded-[2.25rem] border-white/10 bg-white/[0.05] text-white md:col-span-2"
-                      : "rounded-[2rem] border-white/10 bg-white/[0.05] text-white"
+                      ? "rounded-[2.25rem] !border-white/10 !bg-[linear-gradient(145deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] text-white shadow-none backdrop-blur-xl md:col-span-2"
+                      : "rounded-[2rem] !border-white/10 !bg-[linear-gradient(145deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] text-white shadow-none backdrop-blur-xl"
                   }
                 >
                   <CardHeader>
