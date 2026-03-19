@@ -10,12 +10,128 @@ permissions:
   contents: read
 
 jobs:
+  installer-state:
+    runs-on: ubuntu-latest
+    outputs:
+      desktop_changed: ${{ steps.filter.outputs.installer }}
+      installer_exists: ${{ steps.remote.outputs.installer_exists }}
+      should_build: ${{ steps.decision.outputs.should_build }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect installer-relevant changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            installer:
+              - 'apps/desktop/**'
+              - 'packages/types/**'
+              - 'packages/database/**'
+              - 'packages/ui/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+
+      - name: Check installer on VPS
+        id: remote
+        env:
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          sudo apt-get update -y
+          sudo apt-get install -y sshpass
+
+          if sshpass -p "${VPS_PASSWORD}" ssh \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            root@revendeo.com.br \
+            "test -f /var/www/revendeo-downloads/revendeo-pdv-installer.exe"; then
+            echo "installer_exists=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "installer_exists=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Decide if installer build is required
+        id: decision
+        env:
+          DESKTOP_CHANGED: ${{ steps.filter.outputs.installer }}
+          INSTALLER_EXISTS: ${{ steps.remote.outputs.installer_exists }}
+        run: |
+          set -euo pipefail
+
+          if [ "${DESKTOP_CHANGED}" = "true" ] || [ "${INSTALLER_EXISTS}" != "true" ]; then
+            echo "should_build=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "should_build=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+  build-installer:
+    needs: installer-state
+    if: needs.installer-state.outputs.should_build == 'true'
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Windows installer
+        run: pnpm --filter @pdv/desktop dist:win
+
+      - name: Normalize installer artifact
+        shell: powershell
+        run: |
+          $installer = Get-ChildItem -Path "apps/desktop/release" -Filter "*.exe" -File -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $installer) {
+            throw "Instalador .exe nao encontrado em apps/desktop/release"
+          }
+
+          New-Item -ItemType Directory -Force -Path "installer-artifact" | Out-Null
+          Copy-Item $installer.FullName "installer-artifact/revendeo-pdv-installer.exe"
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: revendeo-installer
+          path: installer-artifact/revendeo-pdv-installer.exe
+          if-no-files-found: error
+          retention-days: 7
+
   deploy:
+    needs:
+      - installer-state
+      - build-installer
+    if: ${{ always() && needs.installer-state.result == 'success' && (needs.build-installer.result == 'success' || needs.build-installer.result == 'skipped') }}
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Download installer artifact
+        if: needs.installer-state.outputs.should_build == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: revendeo-installer
+          path: installer-artifact
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@master
@@ -160,6 +276,51 @@ jobs:
             LETSENCRYPT_EMAIL="${LETSENCRYPT_EMAIL}" \
             bash scripts/install-vps.sh
 
+      - name: Prepare installer staging on VPS
+        if: needs.installer-state.outputs.should_build == 'true'
+        uses: appleboy/ssh-action@master
+        with:
+          host: revendeo.com.br
+          username: root
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: 22
+          script: |
+            set -euo pipefail
+            mkdir -p /tmp/revendeo-installer-staging
+            rm -f /tmp/revendeo-installer-staging/*
+
+      - name: Upload installer to VPS
+        if: needs.installer-state.outputs.should_build == 'true'
+        uses: appleboy/scp-action@master
+        with:
+          host: revendeo.com.br
+          username: root
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: 22
+          source: installer-artifact/revendeo-pdv-installer.exe
+          target: /tmp/revendeo-installer-staging
+          strip_components: 1
+
+      - name: Publish installer on VPS
+        if: needs.installer-state.outputs.should_build == 'true'
+        uses: appleboy/ssh-action@master
+        with:
+          host: revendeo.com.br
+          username: root
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: 22
+          script: |
+            set -euo pipefail
+
+            DOWNLOADS_DIR="/var/www/revendeo-downloads"
+            STAGING_DIR="/tmp/revendeo-installer-staging"
+            INSTALLER_FILENAME="revendeo-pdv-installer.exe"
+
+            install -d -m 755 "${DOWNLOADS_DIR}"
+            rm -f "${DOWNLOADS_DIR}"/*.exe
+            install -m 644 "${STAGING_DIR}/${INSTALLER_FILENAME}" "${DOWNLOADS_DIR}/${INSTALLER_FILENAME}"
+            rm -rf "${STAGING_DIR}"
+
       - name: Verify deployment
         if: success()
         run: |
@@ -168,4 +329,11 @@ jobs:
           echo "Painel alternativo: https://www.revendeo.com.br"
           echo "API: https://revendeo.com.br/v1"
           echo "Health check: https://revendeo.com.br/health"
-          echo "HTTPS e provisionado automaticamente; LETSENCRYPT_EMAIL e opcional e serve apenas como contato de renovacao."
+          echo "Pagina de download: https://revendeo.com.br/download"
+          echo "Instalador: https://revendeo.com.br/downloads/revendeo-pdv-installer.exe"
+
+          if [ "${{ needs.installer-state.outputs.should_build }}" = "true" ]; then
+            echo "Instalador gerado e publicado nesta execucao."
+          else
+            echo "Instalador preservado sem rebuild, porque nao houve mudancas relevantes."
+          fi

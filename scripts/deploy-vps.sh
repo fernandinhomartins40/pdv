@@ -10,6 +10,8 @@ WEB_PORT="${WEB_PORT:-3040}"
 API_PORT="${API_PORT:-3041}"
 REQUIRED_NODE_MAJOR="${REQUIRED_NODE_MAJOR:-20}"
 TLS_ENABLED="${TLS_ENABLED:-1}"
+DOWNLOADS_DIR="${DOWNLOADS_DIR:-/var/www/revendeo-downloads}"
+INSTALLER_FILENAME="${INSTALLER_FILENAME:-revendeo-pdv-installer.exe}"
 
 log() {
   printf '\n==> %s\n' "$1"
@@ -188,6 +190,11 @@ ensure_env_file() {
   set +a
 }
 
+ensure_downloads_dir() {
+  log "Preparando diretorio de downloads"
+  install -d -m 755 "${DOWNLOADS_DIR}"
+}
+
 ensure_local_postgres() {
   local original_dir
 
@@ -322,6 +329,13 @@ server {
     server_name ${PRIMARY_DOMAIN} ${SECONDARY_DOMAIN};
     client_max_body_size 20m;
 
+    location /downloads/ {
+        alias ${DOWNLOADS_DIR}/;
+        default_type application/octet-stream;
+        add_header Cache-Control "no-store";
+        add_header Content-Disposition "attachment";
+    }
+
     location /v1/ {
         proxy_pass http://127.0.0.1:${API_PORT};
         proxy_http_version 1.1;
@@ -406,6 +420,7 @@ main() {
   ensure_base_packages
   ensure_node
   ensure_env_file
+  ensure_downloads_dir
   ensure_local_postgres
   build_apps
   configure_services
@@ -421,6 +436,8 @@ main() {
   echo "Painel: ${public_scheme}://${PRIMARY_DOMAIN}"
   echo "API: ${public_scheme}://${PRIMARY_DOMAIN}/v1"
   echo "Health: ${public_scheme}://${PRIMARY_DOMAIN}/health"
+  echo "Download: ${public_scheme}://${PRIMARY_DOMAIN}/download"
+  echo "Instalador: ${public_scheme}://${PRIMARY_DOMAIN}/downloads/${INSTALLER_FILENAME}"
 }
 
 main "$@"
