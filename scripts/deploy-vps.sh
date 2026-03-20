@@ -129,6 +129,34 @@ get_compose_network_gateway_ip() {
   docker network inspect "${network_name}" --format '{{(index .IPAM.Config 0).Gateway}}' 2>/dev/null
 }
 
+get_compose_network_subnet() {
+  local network_name=""
+
+  network_name="$(get_compose_network_name || true)"
+  if [[ -z "${network_name}" ]]; then
+    return 1
+  fi
+
+  docker network inspect "${network_name}" --format '{{(index .IPAM.Config 0).Subnet}}' 2>/dev/null
+}
+
+get_compose_network_bridge_name() {
+  local network_name=""
+  local network_id=""
+
+  network_name="$(get_compose_network_name || true)"
+  if [[ -z "${network_name}" ]]; then
+    return 1
+  fi
+
+  network_id="$(docker network inspect "${network_name}" --format '{{.Id}}' 2>/dev/null || true)"
+  if [[ -z "${network_id}" ]]; then
+    return 1
+  fi
+
+  printf 'br-%s\n' "${network_id:0:12}"
+}
+
 ensure_compose_network_gateway_ip() {
   local gateway_ip="${DOCKER_HOST_GATEWAY_IP:-}"
 
@@ -150,6 +178,35 @@ ensure_compose_network_gateway_ip() {
   DOCKER_HOST_GATEWAY_IP="${gateway_ip}"
   export DOCKER_HOST_GATEWAY_IP
   printf '%s\n' "${gateway_ip}"
+}
+
+ensure_legacy_host_postgres_ufw_rule() {
+  local gateway_ip="${1:-${LEGACY_HOST_POSTGRES_GATEWAY_IP:-}}"
+  local subnet=""
+  local bridge_name=""
+
+  if ! command -v ufw >/dev/null 2>&1; then
+    return
+  fi
+
+  if ! ufw status 2>/dev/null | grep -q '^Status: active'; then
+    return
+  fi
+
+  subnet="$(get_compose_network_subnet || true)"
+  bridge_name="$(get_compose_network_bridge_name || true)"
+
+  if [[ -z "${gateway_ip}" || -z "${subnet}" || -z "${bridge_name}" ]]; then
+    echo "Nao foi possivel determinar a bridge Docker para liberar o proxy PostgreSQL no UFW."
+    exit 1
+  fi
+
+  if ufw status numbered 2>/dev/null | grep -F "${gateway_ip} ${LEGACY_HOST_POSTGRES_PROXY_PORT}/tcp on ${bridge_name}" | grep -F "${subnet}" >/dev/null 2>&1; then
+    return
+  fi
+
+  log "Liberando UFW para o proxy PostgreSQL na bridge ${bridge_name}"
+  ufw allow in on "${bridge_name}" from "${subnet}" to "${gateway_ip}" port "${LEGACY_HOST_POSTGRES_PROXY_PORT}" proto tcp
 }
 
 disable_redundant_ubuntu_mirror_file() {
@@ -472,6 +529,7 @@ EOF
   systemctl restart "${LEGACY_HOST_POSTGRES_PROXY_SERVICE}"
 
   wait_for_tcp "proxy do PostgreSQL legado" "${gateway_ip}" "${LEGACY_HOST_POSTGRES_PROXY_PORT}" 15
+  ensure_legacy_host_postgres_ufw_rule "${gateway_ip}"
 
   if ! validate_container_tcp_access; then
     echo "O container da API nao conseguiu conectar em host.docker.internal:${LEGACY_HOST_POSTGRES_PROXY_PORT} mesmo com o proxy ativo."
