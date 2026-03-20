@@ -19,6 +19,7 @@ LEGACY_HOST_POSTGRES_PROXY_ENABLED="${LEGACY_HOST_POSTGRES_PROXY_ENABLED:-0}"
 LEGACY_HOST_POSTGRES_PROXY_PORT="${LEGACY_HOST_POSTGRES_PROXY_PORT:-5432}"
 LEGACY_HOST_POSTGRES_PROXY_SERVICE="revendeo-postgres-proxy.service"
 LEGACY_HOST_POSTGRES_GATEWAY_IP=""
+DOCKER_HOST_GATEWAY_IP="${DOCKER_HOST_GATEWAY_IP:-}"
 
 log() {
   printf '\n==> %s\n' "$1"
@@ -107,6 +108,48 @@ normalize_legacy_host_postgres_env() {
 
   LEGACY_HOST_POSTGRES_PROXY_ENABLED=0
   LEGACY_HOST_POSTGRES_PROXY_PORT=5432
+}
+
+get_compose_network_name() {
+  docker network ls \
+    --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}" \
+    --filter "label=com.docker.compose.network=revendeo" \
+    --format '{{.Name}}' \
+    | head -n 1
+}
+
+get_compose_network_gateway_ip() {
+  local network_name=""
+
+  network_name="$(get_compose_network_name || true)"
+  if [[ -z "${network_name}" ]]; then
+    return 1
+  fi
+
+  docker network inspect "${network_name}" --format '{{(index .IPAM.Config 0).Gateway}}' 2>/dev/null
+}
+
+ensure_compose_network_gateway_ip() {
+  local gateway_ip="${DOCKER_HOST_GATEWAY_IP:-}"
+
+  if [[ -n "${gateway_ip}" ]]; then
+    printf '%s\n' "${gateway_ip}"
+    return 0
+  fi
+
+  gateway_ip="$(get_compose_network_gateway_ip || true)"
+  if [[ -z "${gateway_ip}" ]]; then
+    compose run --rm --no-deps api sh -lc 'exit 0' >/dev/null 2>&1 || true
+    gateway_ip="$(get_compose_network_gateway_ip || true)"
+  fi
+
+  if [[ -z "${gateway_ip}" ]]; then
+    return 1
+  fi
+
+  DOCKER_HOST_GATEWAY_IP="${gateway_ip}"
+  export DOCKER_HOST_GATEWAY_IP
+  printf '%s\n' "${gateway_ip}"
 }
 
 disable_redundant_ubuntu_mirror_file() {
@@ -355,19 +398,6 @@ disable_legacy_host_postgres_proxy() {
   systemctl daemon-reload
 }
 
-resolve_container_host_gateway_ip() {
-  compose run --rm --no-deps api node -e "
-    const dns = require('node:dns');
-    dns.lookup('host.docker.internal', (error, address) => {
-      if (error) {
-        console.error(error.message);
-        process.exit(1);
-      }
-      process.stdout.write(address);
-    });
-  " 2>/dev/null
-}
-
 validate_container_tcp_access() {
   compose run --rm --no-deps api node -e "
     const net = require('node:net');
@@ -411,9 +441,9 @@ ensure_legacy_host_postgres_proxy() {
   log "Configurando proxy do PostgreSQL legado do host para containers"
   apt-get install -y socat
 
-  gateway_ip="$(resolve_container_host_gateway_ip || true)"
+  gateway_ip="$(ensure_compose_network_gateway_ip || true)"
   if [[ -z "${gateway_ip}" ]]; then
-    echo "Nao foi possivel descobrir o IP de host.docker.internal a partir do container da API."
+    echo "Nao foi possivel descobrir o gateway da rede Docker do compose."
     exit 1
   fi
   LEGACY_HOST_POSTGRES_GATEWAY_IP="${gateway_ip}"
@@ -457,11 +487,11 @@ apply_database_schema() {
     gateway_ip="${LEGACY_HOST_POSTGRES_GATEWAY_IP:-}"
 
     if [[ -z "${gateway_ip}" ]]; then
-      gateway_ip="$(resolve_container_host_gateway_ip || true)"
+      gateway_ip="$(ensure_compose_network_gateway_ip || true)"
     fi
 
     if [[ -z "${gateway_ip}" ]]; then
-      echo "Nao foi possivel resolver o IP de host.docker.internal para aplicar o schema do banco."
+      echo "Nao foi possivel resolver o gateway Docker para aplicar o schema do banco."
       exit 1
     fi
 

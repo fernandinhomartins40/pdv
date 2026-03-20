@@ -35,7 +35,7 @@ services:
     expose:
       - "3000"
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - "host.docker.internal:${DOCKER_HOST_GATEWAY_IP:-host-gateway}"
     restart: unless-stopped
     init: true
     healthcheck:
@@ -65,7 +65,7 @@ services:
     expose:
       - "3001"
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - "host.docker.internal:${DOCKER_HOST_GATEWAY_IP:-host-gateway}"
     restart: unless-stopped
     init: true
     healthcheck:
