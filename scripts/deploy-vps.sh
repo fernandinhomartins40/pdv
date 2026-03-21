@@ -20,6 +20,7 @@ LEGACY_HOST_POSTGRES_PROXY_PORT="${LEGACY_HOST_POSTGRES_PROXY_PORT:-5432}"
 LEGACY_HOST_POSTGRES_PROXY_SERVICE="revendeo-postgres-proxy.service"
 LEGACY_HOST_POSTGRES_GATEWAY_IP=""
 DOCKER_HOST_GATEWAY_IP="${DOCKER_HOST_GATEWAY_IP:-}"
+SEED_TEST_USERS_ENABLED="${SEED_TEST_USERS_ENABLED:-0}"
 
 log() {
   printf '\n==> %s\n' "$1"
@@ -548,11 +549,16 @@ EOF
   fi
 }
 
-apply_database_schema() {
-  local schema_database_url="${DATABASE_URL:-}"
+resolve_compose_database_url() {
+  local compose_database_url="${DATABASE_URL:-}"
   local gateway_ip=""
 
-  if [[ "${LEGACY_HOST_POSTGRES_PROXY_ENABLED:-0}" == "1" && "${schema_database_url}" == *"@host.docker.internal"* ]]; then
+  if [[ -z "${compose_database_url}" ]]; then
+    echo "DATABASE_URL nao definida para a execucao no Docker Compose."
+    exit 1
+  fi
+
+  if [[ "${LEGACY_HOST_POSTGRES_PROXY_ENABLED:-0}" == "1" && "${compose_database_url}" == *"@host.docker.internal"* ]]; then
     gateway_ip="${LEGACY_HOST_POSTGRES_GATEWAY_IP:-}"
 
     if [[ -z "${gateway_ip}" ]]; then
@@ -560,13 +566,21 @@ apply_database_schema() {
     fi
 
     if [[ -z "${gateway_ip}" ]]; then
-      echo "Nao foi possivel resolver o gateway Docker para aplicar o schema do banco."
+      echo "Nao foi possivel resolver o gateway Docker para acessar o banco no Docker Compose."
       exit 1
     fi
 
     set_compose_network_gateway_ip "${gateway_ip}"
-    schema_database_url="${schema_database_url//@host.docker.internal/@${gateway_ip}}"
+    compose_database_url="${compose_database_url//@host.docker.internal/@${gateway_ip}}"
   fi
+
+  printf '%s\n' "${compose_database_url}"
+}
+
+apply_database_schema() {
+  local schema_database_url=""
+
+  schema_database_url="$(resolve_compose_database_url)"
 
   log "Aplicando schema do banco"
   compose run --rm --no-deps -e "DATABASE_URL=${schema_database_url}" api sh -lc '
@@ -578,6 +592,22 @@ apply_database_schema() {
     else
       pnpm --filter @pdv/database exec prisma db push --schema prisma/schema.prisma --accept-data-loss
     fi
+  '
+}
+
+seed_test_users() {
+  local seed_database_url=""
+
+  if [[ "${SEED_TEST_USERS_ENABLED:-0}" != "1" ]]; then
+    return
+  fi
+
+  seed_database_url="$(resolve_compose_database_url)"
+
+  log "Aplicando seed dos usuarios de teste"
+  compose run --rm --no-deps -e "DATABASE_URL=${seed_database_url}" api sh -lc '
+    set -eu
+    pnpm db:seed:test-users
   '
 }
 
@@ -742,6 +772,7 @@ main() {
   build_images
   ensure_legacy_host_postgres_proxy
   apply_database_schema
+  seed_test_users
   start_stack
   configure_nginx
   configure_tls

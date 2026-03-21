@@ -1,23 +1,24 @@
 # Credenciais de Teste
 
-Estas credenciais são destinadas apenas a desenvolvimento e homologação.
+Estas credenciais sao destinadas apenas a desenvolvimento e homologacao.
 
 ## Como criar
 
 1. Configure `DATABASE_URL`.
 2. Rode `pnpm db:seed:test-users`.
+3. Em deploy na VPS, defina `SEED_TEST_USERS_ENABLED=1` para executar esse seed automaticamente depois do schema.
 
-## Senha padrão
+## Senha padrao
 
-Todos os usuários abaixo usam a mesma senha:
+Todos os usuarios abaixo usam a mesma senha:
 
 `Revendeo@123`
 
-## Usuários criados
+## Usuarios criados
 
 | Perfil | Nome | E-mail | Papel | Contexto |
 | --- | --- | --- | --- | --- |
-| Owner | Proprietário Teste | `owner.teste@revendeo.local` | `OWNER` | Revendeo Teste + Revendeo Labs |
+| Owner | Proprietario Teste | `owner.teste@revendeo.local` | `OWNER` | Revendeo Teste + Revendeo Labs |
 | Admin | Administrador Teste | `admin.teste@revendeo.local` | `ADMIN` | Revendeo Teste + Revendeo Labs |
 | Gerente | Gerente Centro/Norte | `gerente.teste@revendeo.local` | `MANAGER` | Revendeo Teste |
 | Caixa | Caixa Centro | `caixa.centro@revendeo.local` | `CASHIER` | Loja Centro |
@@ -27,7 +28,7 @@ Todos os usuários abaixo usam a mesma senha:
 
 ## Estrutura criada pelo seed
 
-### Organizações
+### Organizacoes
 
 - `Revendeo Teste` (`revendeo-teste`)
 - `Revendeo Labs` (`revendeo-labs`)
@@ -44,7 +45,8 @@ Todos os usuários abaixo usam a mesma senha:
 - `PDV Norte 01` (`PDV-NORTE-01`)
 - `PDV Labs 01` (`PDV-LABS-01`)
 
-## Observações
+## Observacoes
 
-- O seed é idempotente: pode ser executado novamente sem duplicar usuários, organizações, lojas ou terminais.
-- Os usuários são marcados com e-mail verificado para permitir login imediato.
+- O seed e idempotente: pode ser executado novamente sem duplicar usuarios, organizacoes, lojas ou terminais.
+- Os usuarios sao marcados com e-mail verificado para permitir login imediato.
+- Quando `SEED_TEST_USERS_ENABLED=1`, o deploy da VPS roda esse seed automaticamente.

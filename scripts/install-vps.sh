@@ -21,6 +21,7 @@ LOCAL_POSTGRES_PASSWORD_FILE="${LOCAL_POSTGRES_PASSWORD_FILE:-/root/.revendeo-po
 LOCAL_POSTGRES_PASSWORD="${LOCAL_POSTGRES_PASSWORD:-}"
 LEGACY_HOST_POSTGRES_PROXY_ENABLED="${LEGACY_HOST_POSTGRES_PROXY_ENABLED:-0}"
 LEGACY_HOST_POSTGRES_PROXY_PORT="${LEGACY_HOST_POSTGRES_PROXY_PORT:-5432}"
+SEED_TEST_USERS_ENABLED="${SEED_TEST_USERS_ENABLED:-}"
 
 log() {
   printf '\n==> %s\n' "$1"
@@ -157,6 +158,29 @@ prepare_database_url() {
   DATABASE_URL="postgresql://${LOCAL_POSTGRES_USER}:${LOCAL_POSTGRES_PASSWORD}@postgres:5432/${LOCAL_POSTGRES_DB}?schema=public"
 }
 
+load_existing_seed_test_users_setting() {
+  local source_file=""
+  local existing_value=""
+
+  if [[ -n "${SEED_TEST_USERS_ENABLED}" ]]; then
+    return
+  fi
+
+  if [[ -f "${ENV_FILE}" ]]; then
+    source_file="${ENV_FILE}"
+  elif [[ -f "${BACKUP_ENV_FILE}" ]]; then
+    source_file="${BACKUP_ENV_FILE}"
+  else
+    return
+  fi
+
+  existing_value="$(awk -F= '$1 == "SEED_TEST_USERS_ENABLED" { value = substr($0, index($0, "=") + 1) } END { print value }' "${source_file}")"
+
+  if [[ -n "${existing_value}" ]]; then
+    SEED_TEST_USERS_ENABLED="${existing_value}"
+  fi
+}
+
 write_env_file() {
   log "Preparando .env.production"
 
@@ -164,6 +188,7 @@ write_env_file() {
     cp "${ENV_FILE}" "${BACKUP_ENV_FILE}"
   fi
 
+  load_existing_seed_test_users_setting
   prepare_database_url
   resolve_app_scheme
 
@@ -185,6 +210,9 @@ write_env_file() {
       printf '%s\n' "DOWNLOADS_DIR=${DOWNLOADS_DIR}"
       printf '%s\n' "LOCAL_POSTGRES_ENABLED=${LOCAL_POSTGRES_ENABLED}"
       printf '%s\n' "LEGACY_HOST_POSTGRES_PROXY_ENABLED=${LEGACY_HOST_POSTGRES_PROXY_ENABLED}"
+      if [[ -n "${SEED_TEST_USERS_ENABLED}" ]]; then
+        printf '%s\n' "SEED_TEST_USERS_ENABLED=${SEED_TEST_USERS_ENABLED}"
+      fi
       if [[ "${LEGACY_HOST_POSTGRES_PROXY_ENABLED}" == "1" ]]; then
         printf '%s\n' "LEGACY_HOST_POSTGRES_PROXY_PORT=${LEGACY_HOST_POSTGRES_PROXY_PORT}"
       fi
