@@ -46,6 +46,14 @@ dump_service_diagnostics() {
   echo
 }
 
+dump_stack_diagnostics() {
+  local service_name
+
+  for service_name in api web nginx; do
+    dump_service_diagnostics "${service_name}"
+  done
+}
+
 wait_for_http() {
   local name="$1"
   local url="$2"
@@ -61,7 +69,11 @@ wait_for_http() {
     sleep 2
   done
 
-  dump_service_diagnostics "${service_name}"
+  if [[ "${service_name}" == "nginx" ]]; then
+    dump_stack_diagnostics
+  else
+    dump_service_diagnostics "${service_name}"
+  fi
   echo "Timeout aguardando ${name} responder em ${url}."
   exit 1
 }
@@ -740,6 +752,9 @@ run_healthchecks() {
   local attempt
 
   log "Validando proxy interno do stack"
+  wait_for_container_health "api" 45
+  wait_for_container_health "web" 45
+  wait_for_container_health "nginx" 45
   wait_for_http "proxy interno" "http://127.0.0.1:${APP_PORT}/health" "nginx" 30
   wait_for_http "painel web interno" "http://127.0.0.1:${APP_PORT}" "web" 30
 
@@ -753,7 +768,7 @@ run_healthchecks() {
   done
 
   systemctl --no-pager --full status nginx || true
-  dump_service_diagnostics "nginx"
+  dump_stack_diagnostics
   echo "Timeout aguardando o nginx da VPS rotear a aplicacao."
   exit 1
 }

@@ -30,6 +30,8 @@ FROM base AS api-runner
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+WORKDIR /app/apps/api
+
 COPY --from=build /app /app
 RUN mkdir -p /pnpm && chown -R node:node /app /pnpm
 
@@ -37,12 +39,14 @@ USER node
 
 EXPOSE 3001
 
-CMD ["pnpm", "--filter", "@pdv/api", "start"]
+CMD ["node", "dist/server.js"]
 
 FROM base AS web-runner
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+
+WORKDIR /app/apps/web
 
 COPY --from=build /app /app
 RUN mkdir -p /pnpm && chown -R node:node /app /pnpm
@@ -51,4 +55,4 @@ USER node
 
 EXPOSE 3000
 
-CMD ["pnpm", "--filter", "@pdv/web", "start", "--hostname", "0.0.0.0", "--port", "3000"]
+CMD ["node", "node_modules/next/dist/bin/next", "start", "--hostname", "0.0.0.0", "--port", "3000"]
