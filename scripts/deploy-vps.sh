@@ -175,9 +175,19 @@ ensure_compose_network_gateway_ip() {
     return 1
   fi
 
+  printf '%s\n' "${gateway_ip}"
+}
+
+set_compose_network_gateway_ip() {
+  local gateway_ip="${1:-}"
+
+  if [[ -z "${gateway_ip}" ]]; then
+    echo "Gateway Docker vazio; nao foi possivel exportar DOCKER_HOST_GATEWAY_IP."
+    exit 1
+  fi
+
   DOCKER_HOST_GATEWAY_IP="${gateway_ip}"
   export DOCKER_HOST_GATEWAY_IP
-  printf '%s\n' "${gateway_ip}"
 }
 
 ensure_legacy_host_postgres_ufw_rule() {
@@ -503,6 +513,7 @@ ensure_legacy_host_postgres_proxy() {
     echo "Nao foi possivel descobrir o gateway da rede Docker do compose."
     exit 1
   fi
+  set_compose_network_gateway_ip "${gateway_ip}"
   LEGACY_HOST_POSTGRES_GATEWAY_IP="${gateway_ip}"
 
   wait_for_tcp "PostgreSQL legado do host" "127.0.0.1" "${LEGACY_HOST_POSTGRES_PROXY_PORT}" 15
@@ -553,6 +564,7 @@ apply_database_schema() {
       exit 1
     fi
 
+    set_compose_network_gateway_ip "${gateway_ip}"
     schema_database_url="${schema_database_url//@host.docker.internal/@${gateway_ip}}"
   fi
 
