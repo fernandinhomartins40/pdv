@@ -2,15 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { PaymentMethod, Product, SaleStep, UserIdentity } from "@pdv/types";
 import { paymentMethods } from "@pdv/types";
-import { Button, Card, ShortcutHint, StatusDot, Stepper } from "@pdv/ui";
+import { Button, Card, ShortcutHint, StatusDot } from "@pdv/ui";
 import {
   ArrowLeft,
   ArrowRight,
   CreditCard,
   LogOut,
-  Minus,
   Package2,
-  Plus,
   Power,
   RefreshCcw,
   Save,
@@ -69,13 +67,17 @@ function formatCurrency(value: number) {
   });
 }
 
-function formatDateTime(value: Date) {
+function formatAmount(value: number) {
   return value.toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function formatQuantity(value: number) {
+  return value.toLocaleString("pt-BR", {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4
   });
 }
 
@@ -90,7 +92,6 @@ function round(value: number) {
 export function App() {
   const [step, setStep] = useState<SaleStep>("NEW_SALE");
   const [query, setQuery] = useState("");
-  const [priceLabel, setPriceLabel] = useState("Preço Padrão");
   const [operator, setOperator] = useState<UserIdentity>({
     id: "cashier-001",
     email: "operador@loja.com",
@@ -126,23 +127,18 @@ export function App() {
   const barcodeInputRef = useRef<HTMLInputElement | null>(null);
   const discountInputRef = useRef<HTMLInputElement | null>(null);
   const matchCarouselRef = useRef<HTMLDivElement | null>(null);
-  const priceRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const subtotalAmount = useMemo(
     () => round(items.reduce((total, item) => total + item.quantity * item.unitPrice - item.discountAmount, 0)),
     [items]
   );
+  const selectedItem = useMemo(() => items.find((item) => item.productId === selectedItemId) ?? null, [items, selectedItemId]);
   const totalAmount = useMemo(() => round(Math.max(subtotalAmount - discountAmount, 0)), [subtotalAmount, discountAmount]);
   const paidAmount = useMemo(() => round(payments.reduce((total, payment) => total + payment.amount, 0)), [payments]);
   const remainingAmount = useMemo(() => round(Math.max(totalAmount - paidAmount, 0)), [paidAmount, totalAmount]);
-  const totalUnits = useMemo(() => items.reduce((total, item) => total + item.quantity, 0), [items]);
-  const selectedItem = useMemo(() => items.find((item) => item.productId === selectedItemId) ?? null, [items, selectedItemId]);
-  const selectedItemIndex = useMemo(
-    () => (selectedItem ? items.findIndex((item) => item.productId === selectedItem.productId) + 1 : null),
-    [items, selectedItem]
-  );
-  const receiptPreviewNumber = useMemo(() => String(saleStartedAt.getTime()).slice(-8), [saleStartedAt]);
-
+  const selectedQuantity = selectedItem?.quantity ?? 0;
+  const selectedUnitPrice = selectedItem?.unitPrice ?? 0;
+  const selectedLineTotal = selectedItem?.totalAmount ?? 0;
   useEffect(() => {
     void loadBootstrap();
   }, []);
@@ -232,15 +228,6 @@ export function App() {
           adjustSelectedQuantity(1);
         }
 
-        if (event.key === "F5") {
-          event.preventDefault();
-          if (selectedItemId) {
-            priceRefs.current[selectedItemId]?.focus();
-          } else {
-            setStatusMessage("Selecione um item da venda para alterar o valor.");
-          }
-        }
-
         if (event.key === "F6") {
           event.preventDefault();
           if (selectedItemId) {
@@ -308,7 +295,6 @@ export function App() {
     try {
       const data = await window.pdv.bootstrap();
       setOperator(data.operator);
-      setPriceLabel(data.priceLabel);
       setSyncPending(data.syncPending);
       setCashSessionOpen(data.cashSessionOpen);
       setLastSyncError(data.lastSyncError);
@@ -552,22 +538,6 @@ export function App() {
     );
   }
 
-  function updateUnitPrice(productId: string, unitPrice: number) {
-    const safeUnitPrice = Number.isFinite(unitPrice) ? Math.max(unitPrice, 0) : 0;
-
-    setItems((current) =>
-      current.map((item) =>
-        item.productId === productId
-          ? {
-              ...item,
-              unitPrice: safeUnitPrice,
-              totalAmount: round(item.quantity * safeUnitPrice - item.discountAmount)
-            }
-          : item
-      )
-    );
-  }
-
   function removeItem(productId: string) {
     setItems((current) => current.filter((item) => item.productId !== productId));
     setSelectedItemId((current) => (current === productId ? null : current));
@@ -702,6 +672,9 @@ export function App() {
             <UserRound size={16} />
             {operator.email}
           </span>
+          <span className={`status-chip ${cashSessionOpen ? "success" : "warning"}`}>
+            Caixa {cashSessionOpen ? "aberto" : "fechado"}
+          </span>
           <button className="icon-button" type="button" onClick={openSettings}>
             <Settings size={18} />
           </button>
@@ -720,24 +693,6 @@ export function App() {
           </button>
         </div>
       </header>
-
-      <section className="workspace-topbar">
-        <div className="status-bar">
-          <span className={`status-chip ${cashSessionOpen ? "success" : "warning"}`}>
-            Caixa {cashSessionOpen ? "aberto" : "fechado"}
-          </span>
-          <span className="status-chip neutral">{settings.organizationId}</span>
-          <span className="status-chip neutral subtle">{priceLabel}</span>
-          <button type="button" className="sync-action" onClick={() => void runSync()} disabled={syncBusy}>
-            <RefreshCcw size={16} />
-            {syncBusy ? "Sincronizando..." : "Sincronizar agora"}
-          </button>
-        </div>
-
-        <div className="stepper-shell">
-          <Stepper activeStep={step} />
-        </div>
-      </section>
 
       <main className="pdv-main">
         {step === "NEW_SALE" ? (
@@ -793,234 +748,70 @@ export function App() {
             ) : null}
 
             <Card className="sale-table-card">
-              <div className="receipt-preview-header">
-                <span className="receipt-eyebrow">Pre-cupom operacional</span>
-                <strong>SIGE Lite PDV</strong>
-                <span>{settings.organizationId}</span>
-                <span>Loja/Caixa: {settings.storeId}</span>
-                <span>Operador: {operator.name}</span>
-                <span>Documento: {receiptPreviewNumber}</span>
-                <span>Emissão: {formatDateTime(saleStartedAt)}</span>
-              </div>
               <div className="sale-table-header">
-                <span>Item</span>
+                <span>Cod. Barras</span>
                 <span>Descrição</span>
-                <span>Dados</span>
-                <span>Unit.</span>
-                <span>Valor Total</span>
+                <span>Qtd.</span>
+                <span>Vl. Unit.</span>
+                <span>Vl. Total</span>
               </div>
               <div className="sale-table-body">
-                {items.length === 0 ? (
-                  <div className="empty-state">Nenhum item lancado. O cupom sera montado conforme os produtos forem inseridos.</div>
-                ) : (
-                  items.map((item, index) => (
-                    <button
-                      key={item.productId}
-                      type="button"
-                      className={`sale-row ${selectedItemId === item.productId ? "selected" : ""}`}
-                      onClick={() => setSelectedItemId(item.productId)}
-                    >
-                      <span>{index + 1}</span>
-                      <span className="row-name">
-                        {item.productName}
-                        <small className="row-subline">
-                          COD {formatReceiptCode(item)}  UN {item.unit}
-                        </small>
-                      </span>
-                      <span className="receipt-data-cell">
-                        {item.quantity} {item.unit}
-                      </span>
-                      <span className="receipt-data-cell">{formatCurrency(item.unitPrice)}</span>
-                      <span className="row-total receipt-total">
-                        {formatCurrency(item.totalAmount)}
-                      </span>
-                    </button>
-                  ))
-                )}
+                {items.map((item) => (
+                  <button
+                    key={item.productId}
+                    type="button"
+                    className={`sale-row ${selectedItemId === item.productId ? "selected" : ""}`}
+                    onClick={() => setSelectedItemId(item.productId)}
+                  >
+                    <span className="receipt-code-cell">{formatReceiptCode(item)}</span>
+                    <span className="row-name">{item.productName}</span>
+                    <span className="receipt-data-cell">{item.quantity}</span>
+                    <span className="receipt-data-cell">{formatCurrency(item.unitPrice)}</span>
+                    <span className="row-total receipt-total">
+                      {formatCurrency(item.totalAmount)}
+                    </span>
+                  </button>
+                ))}
               </div>
-              <div className="receipt-preview-footer">
-                <div className="receipt-divider" />
-                <div className="receipt-summary-line">
-                  <span>Qtd. total de itens</span>
-                  <strong>{items.length}</strong>
-                </div>
-                <div className="receipt-summary-line">
-                  <span>Qtd. acumulada</span>
-                  <strong>{totalUnits}</strong>
-                </div>
-                <div className="receipt-summary-line">
-                  <span>Subtotal</span>
-                  <strong>{formatCurrency(subtotalAmount)}</strong>
-                </div>
-                <div className="receipt-summary-line">
-                  <span>Desconto</span>
-                  <strong>{formatCurrency(discountAmount)}</strong>
-                </div>
-                <div className="receipt-summary-line total">
-                  <span>Valor a pagar</span>
-                  <strong>{formatCurrency(totalAmount)}</strong>
-                </div>
-                <div className="receipt-divider dashed" />
-                <div className="receipt-section">
-                  <span className="receipt-section-label">Forma de pagamento</span>
-                  {payments.length === 0 ? (
-                    <div className="receipt-summary-line">
-                      <span>A informar</span>
-                      <strong>{formatCurrency(totalAmount)}</strong>
-                    </div>
-                  ) : (
-                    payments.map((payment) => (
-                      <div key={payment.method} className="receipt-summary-line">
-                        <span>{payment.label}</span>
-                        <strong>{formatCurrency(payment.amount)}</strong>
-                      </div>
-                    ))
-                  )}
-                </div>
-                <div className="receipt-divider dashed" />
-                <div className="receipt-section">
-                  <span className="receipt-section-label">Informações gerais</span>
-                  <div className="receipt-notes">
-                    <span>Caixa: {cashSessionOpen ? "ABERTO" : "FECHADO"}</span>
-                    <span>Sync: {lastSyncError ? "COM ALERTA" : "OPERACIONAL"}</span>
-                    <span>Operador: {operator.email}</span>
-                    <span>QR-Code e chave de acesso aparecem apos a emissao fiscal.</span>
-                  </div>
-                </div>
-                <div className="receipt-qr-placeholder">
-                  <span>QR NFC-e</span>
-                  <small>Liberado na emissao fiscal</small>
-                </div>
+              <div className="sale-table-total-strip">
+                <div className="sale-table-total-label">Total compra R$</div>
+                <strong className="sale-table-total-value">{formatAmount(totalAmount)}</strong>
               </div>
-            </Card>
-
-            <Card className="item-focus-card">
-              <div className="item-focus-header">
-                <div>
-                  <span className="item-focus-eyebrow">Item em foco</span>
-                  <h3>{selectedItem ? selectedItem.productName : "Aguardando lancamento"}</h3>
-                  <p>
-                    {selectedItem
-                      ? `Linha ${String(selectedItemIndex).padStart(2, "0")} pronta para ajuste rápido no painel de funções.`
-                      : "Lance um produto para visualizar código, unidade, quantidade e valor nesta área."}
-                  </p>
-                </div>
-                <span className={`item-focus-badge ${selectedItem ? "active" : "idle"}`}>
-                  {selectedItem ? "Selecionado" : "Sem item"}
-                </span>
-              </div>
-
-              {selectedItem ? (
-                <>
-                  <div className="item-focus-meta">
-                    <div>
-                      <span>Codigo</span>
-                      <strong>{formatReceiptCode(selectedItem)}</strong>
-                    </div>
-                    <div>
-                      <span>SKU</span>
-                      <strong>{selectedItem.sku}</strong>
-                    </div>
-                    <div>
-                      <span>Unidade</span>
-                      <strong>{selectedItem.unit}</strong>
-                    </div>
-                    <div>
-                      <span>NCM / CFOP</span>
-                      <strong>
-                        {selectedItem.ncm ?? "--"} / {selectedItem.cfop ?? "--"}
-                      </strong>
-                    </div>
-                  </div>
-
-                  <div className="item-focus-editors">
-                    <div className="item-input-card">
-                      <span>Quantidade (F4)</span>
-                      <div className="quantity-cell">
-                        <button className="qty-button negative" type="button" onClick={() => updateQuantity(selectedItem.productId, selectedItem.quantity - 1)}>
-                          <Minus size={14} />
-                        </button>
-                        <input
-                          className="qty-input"
-                          value={selectedItem.quantity}
-                          onChange={(event) => updateQuantity(selectedItem.productId, Number(event.target.value))}
-                        />
-                        <button className="qty-button positive" type="button" onClick={() => updateQuantity(selectedItem.productId, selectedItem.quantity + 1)}>
-                          <Plus size={14} />
-                        </button>
-                      </div>
-                    </div>
-
-                    <label className="item-input-card">
-                      <span>Valor unitario (F5)</span>
-                      <input
-                        ref={(element) => {
-                          priceRefs.current[selectedItem.productId] = element;
-                        }}
-                        className="price-input price-input-wide"
-                        value={selectedItem.unitPrice.toFixed(2)}
-                        onChange={(event) => updateUnitPrice(selectedItem.productId, Number(event.target.value.replace(",", ".")))}
-                      />
-                    </label>
-
-                    <div className="item-total-card">
-                      <span>Total do item</span>
-                      <strong>{formatCurrency(selectedItem.totalAmount)}</strong>
-                      <small>
-                        {selectedItem.quantity} x {formatCurrency(selectedItem.unitPrice)}
-                      </small>
-                    </div>
-                  </div>
-
-                  <div className="item-focus-actions">
-                    <button type="button" className="item-ghost-button" onClick={focusProductSearch}>
-                      Buscar outro item
-                    </button>
-                    <button type="button" className="item-danger-button" onClick={() => removeItem(selectedItem.productId)}>
-                      Remover item (F6)
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="empty-focus-state">
-                  <strong>Painel pronto para edição rápida</strong>
-                  <span>Quando um item entrar na venda, este bloco mostra código, unidade, quantidade e valor sem depender de uma grade interativa.</span>
-                </div>
-              )}
             </Card>
 
             <div className="summary-grid">
-              <div className="summary-box">
-                <span className="summary-label">Operador</span>
-                <strong>{operator.name}</strong>
-                <span className="sefaz-line">
-                  <StatusDot online={online && !lastSyncError} />
-                  {lastSyncError ? "Sync com alerta" : "Sync operacional"}
-                </span>
+              <div className="summary-box metric">
+                <span className="summary-kicker">Quantidade</span>
+                <strong className="summary-metric-value">{formatQuantity(selectedQuantity)}</strong>
               </div>
-              <div className="summary-box center">
-                <strong className="summary-highlight">{items.length}</strong>
-                <span className="summary-label">Item</span>
+              <div className="summary-box center operator compact">
+                <strong className="summary-operator-mark">x</strong>
               </div>
-              <div className="summary-box center">
+              <div className="summary-box metric">
+                <span className="summary-kicker">Valor unitario</span>
+                <strong className="summary-metric-money">{formatCurrency(selectedUnitPrice)}</strong>
+              </div>
+              <div className="summary-box total">
+                <span className="summary-kicker">Valor total</span>
+                <strong className="summary-grand-total">{formatCurrency(selectedLineTotal)}</strong>
+              </div>
+            </div>
+
+            <div className="message-row">
+              <div className="inline-status-message">{statusMessage}</div>
+              <label className="discount-strip">
+                <span>Desconto (F10)</span>
                 <input
                   ref={discountInputRef}
-                  className="discount-input"
+                  className="discount-input discount-strip-input"
                   value={discountAmount.toFixed(2)}
                   onChange={(event) => {
                     const nextDiscount = Number(event.target.value.replace(",", "."));
                     setDiscountAmount(Number.isFinite(nextDiscount) ? Math.max(nextDiscount, 0) : 0);
                   }}
                 />
-                <span className="summary-label">Desconto (F10)</span>
-              </div>
-              <div className="summary-box center total">
-                <strong className="summary-grand-total">{formatCurrency(totalAmount)}</strong>
-                <span className="summary-label">Total</span>
-              </div>
+              </label>
             </div>
-
-            <div className="inline-status-message">{statusMessage}</div>
 
             <div className="bottom-actions">
               <Button variant="secondary" shortcut="F12" onClick={() => void toggleCashSession()} style={{ maxWidth: 330 }}>
@@ -1187,7 +978,7 @@ export function App() {
         </div>
         {lastSyncError ? <div className="error-strip">Último erro de sincronização: {lastSyncError}</div> : null}
         <div className="shortcut-row">
-          F2 = Buscar Produto/Serviço &nbsp; F3 = Adicionar Produto &nbsp; F4 = Alterar quantidade &nbsp; F5 = Alterar valor
+          F2 = Buscar Produto/Serviço &nbsp; F3 = Adicionar Produto &nbsp; F4 = Alterar quantidade
           &nbsp; F6 = Remover produto/serviço &nbsp; F8 = Finalizar Venda &nbsp; F10 = Desconto
         </div>
       </footer>
