@@ -221,7 +221,7 @@ function DifferentialCard({ icon: Icon, title, description, tone }: Differential
 function FloatingPill({ children, className }: { children: React.ReactNode; className: string }) {
   return (
     <div
-      className={`absolute rounded-2xl border border-white/10 px-4 py-3 text-sm font-medium text-white shadow-[0_18px_36px_rgba(4,10,20,0.34)] backdrop-blur-xl ${className}`}
+      className={`absolute rounded-full border border-white/12 bg-[#0c1f39]/88 px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_36px_rgba(4,10,20,0.3)] backdrop-blur-md ${className}`}
     >
       {children}
     </div>
@@ -229,104 +229,147 @@ function FloatingPill({ children, className }: { children: React.ReactNode; clas
 }
 
 function HeroVisual() {
+  const orderQueue = ["Mesa 04 - pronto", "Loja Centro - fechamento", "Reposicao Norte"];
+  const summaryCards = [
+    ["R$ 18,4 mil", "text-[#16d5b0]"],
+    ["287 tickets", "text-[#6b5cff]"],
+    ["98% estoque ok", "text-[#ffbe45]"]
+  ] as const;
+  const progressCards = [
+    ["Produtos", "76%", "bg-[#16d5b0]"],
+    ["Recebimentos", "58%", "bg-[#6b5cff]"],
+    ["Reposicao", "43%", "bg-[#ffbe45]"]
+  ] as const;
+  const flowSteps = [
+    "Conta principal conectada",
+    "Loja Centro selecionada",
+    "Caixa aberto e sincronizado",
+    "Retaguarda com leitura ao vivo"
+  ];
+
   return (
-    <div className="relative min-h-[380px] lg:min-h-[520px]">
+    <div className="relative min-h-[420px] lg:min-h-[560px]">
+      <div className="absolute inset-0 rounded-[2.8rem] bg-[radial-gradient(circle_at_14%_20%,rgba(22,213,176,0.12),transparent_24%),radial-gradient(circle_at_86%_14%,rgba(107,92,255,0.18),transparent_28%)]" />
       <div className="absolute left-6 top-10 size-36 rounded-full bg-[#18d6b4]/16 blur-3xl" />
       <div className="absolute right-12 top-14 size-40 rounded-full bg-[#6b5cff]/18 blur-3xl" />
 
-      <FloatingPill className="left-8 top-12 bg-[#112a49]/88">R$ 93.540</FloatingPill>
-      <FloatingPill className="right-10 top-24 bg-[#6957ff]/90">+ 531 itens</FloatingPill>
-      <FloatingPill className="left-20 top-40 bg-[#0d3658]/92">NF-e emitida</FloatingPill>
-      <FloatingPill className="right-2 top-[54%] bg-[#2547b7]/88">2x mais agilidade</FloatingPill>
-      <FloatingPill className="left-[22%] bottom-14 bg-[#10324f]/92">Venda liberada</FloatingPill>
+      <FloatingPill className="left-4 top-10 hidden sm:block">R$ 93.540</FloatingPill>
+      <FloatingPill className="right-10 top-14 bg-[#173467]/90">+ 531 itens</FloatingPill>
+      <FloatingPill className="left-12 bottom-16 hidden lg:block bg-[#0d3658]/92">NF-e emitida</FloatingPill>
 
-      <div className="absolute inset-x-6 bottom-24 top-20 lg:inset-x-12 lg:top-10">
-        <div className="absolute left-1/2 top-0 h-[78%] w-[80%] -translate-x-1/2 rounded-[2.6rem] border border-white/10 bg-[linear-gradient(160deg,rgba(39,60,96,0.95),rgba(10,20,37,0.98))] shadow-[0_48px_120px_rgba(2,7,15,0.54)] [transform:perspective(1900px)_rotateY(-18deg)_rotateX(10deg)]">
-          <div className="absolute inset-5 rounded-[2rem] border border-white/8 bg-[linear-gradient(180deg,#edf2ff,#dbe6ff_52%,#d4deff)] p-4">
-            <div className="rounded-[1.4rem] bg-[#0f2350] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/68">
-              Revendeo dashboard
+      <div className="absolute left-1/2 top-[54%] w-full max-w-[44rem] -translate-x-1/2 -translate-y-1/2 px-2 sm:px-6">
+        <div className="absolute right-4 top-5 hidden h-[76%] w-[78%] rounded-[2.7rem] border border-white/10 bg-[linear-gradient(160deg,rgba(39,60,96,0.82),rgba(10,20,37,0.96))] shadow-[0_42px_100px_rgba(2,7,15,0.42)] lg:block [transform:rotate(6deg)]" />
+
+        <div className="relative overflow-hidden rounded-[2.6rem] border border-white/10 bg-[linear-gradient(155deg,rgba(16,35,63,0.98),rgba(7,18,33,0.98))] p-4 shadow-[0_42px_100px_rgba(2,7,15,0.55)] sm:p-5">
+          <div className="absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.14),transparent_72%)]" />
+
+          <div className="relative rounded-[1.9rem] border border-white/45 bg-[linear-gradient(180deg,#fdfdff,#eef3ff_48%,#dce5f8)] p-4 shadow-[inset_0_0_0_1px_rgba(10,25,48,0.08)] sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#7a86a5]">Revendeo dashboard</div>
+                <div className="mt-1 font-display text-[1.35rem] tracking-[-0.05em] text-[#11203d]">Operacao em tempo real</div>
+              </div>
+              <div className="rounded-full bg-[#0f2550] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/72">
+                Loja Centro online
+              </div>
             </div>
+          </div>
 
-            <div className="mt-4 grid h-[calc(100%-4rem)] gap-4 lg:grid-cols-[1.18fr_0.82fr]">
-              <div className="rounded-[1.5rem] bg-white p-4 shadow-[inset_0_0_0_1px_rgba(10,25,48,0.06)]">
-                <div className="grid grid-cols-[1.25fr_0.75fr] gap-3">
-                  <div className="rounded-[1.2rem] bg-[#f3f6ff] p-4">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7f88a4]">Pedidos do dia</div>
-                    <div className="mt-3 space-y-3">
-                      {["Mesa 04 - pronto", "Loja Centro - fechamento", "Reposicao Norte"].map((item) => (
-                        <div key={item} className="rounded-2xl bg-white px-4 py-3 text-sm text-[#20304b] shadow-[inset_0_0_0_1px_rgba(10,25,48,0.06)]">
-                          {item}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="rounded-[1.2rem] bg-[#eef1ff] p-4">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7f88a4]">Resumo</div>
-                    <div className="mt-4 grid gap-3">
-                      {[
-                        ["R$ 18,4 mil", "#16d5b0"],
-                        ["287 tickets", "#6b5cff"],
-                        ["98% estoque ok", "#ffbe45"]
-                      ].map(([item, color]) => (
-                        <div key={item} className="rounded-2xl bg-white px-4 py-3 shadow-[inset_0_0_0_1px_rgba(10,25,48,0.05)]">
-                          <div className="text-[10px] uppercase tracking-[0.18em] text-[#8790aa]">Indicador</div>
-                          <div className="mt-2 text-sm font-semibold" style={{ color }}>
-                            {item}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+          <div className="mt-4 grid gap-4 lg:grid-cols-[1.14fr_0.86fr]">
+            <div className="rounded-[1.6rem] bg-white p-4 shadow-[inset_0_0_0_1px_rgba(10,25,48,0.06)]">
+              <div className="grid gap-4 md:grid-cols-[1.16fr_0.84fr]">
+                <div className="rounded-[1.35rem] bg-[#f4f7ff] p-4">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7f88a4]">Pedidos do dia</div>
+                  <div className="mt-4 space-y-3">
+                    {orderQueue.map((item) => (
+                      <div
+                        key={item}
+                        className="rounded-[1.1rem] bg-white px-4 py-3 text-sm font-medium text-[#20304b] shadow-[inset_0_0_0_1px_rgba(10,25,48,0.06)]"
+                      >
+                        {item}
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                <div className="mt-4 grid gap-3 md:grid-cols-3">
-                  {[
-                    ["Produtos", "76%"],
-                    ["Recebimentos", "58%"],
-                    ["Reposicao", "43%"]
-                  ].map(([label, width], index) => (
-                    <div key={label} className="rounded-[1.1rem] bg-[#f6f8ff] px-4 py-3">
-                      <div className="text-[11px] text-[#76819e]">{label}</div>
-                      <div className="mt-3 h-2 rounded-full bg-[#d9e1f4]">
-                        <div
-                          className={`h-full rounded-full ${index === 0 ? "bg-[#16d5b0]" : index === 1 ? "bg-[#6b5cff]" : "bg-[#ffbe45]"}`}
-                          style={{ width }}
-                        />
+                <div className="rounded-[1.35rem] bg-[#eef1ff] p-4">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7f88a4]">Resumo</div>
+                  <div className="mt-4 grid gap-3">
+                    {summaryCards.map(([item, tone]) => (
+                      <div key={item} className="rounded-[1.1rem] bg-white px-4 py-3 shadow-[inset_0_0_0_1px_rgba(10,25,48,0.05)]">
+                        <div className="text-[10px] uppercase tracking-[0.18em] text-[#8790aa]">Indicador</div>
+                        <div className={`mt-2 text-sm font-semibold ${tone}`}>{item}</div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              <div className="rounded-[1.5rem] bg-[linear-gradient(180deg,#132958,#0a1731)] p-4 text-white">
-                <div className="text-[10px] uppercase tracking-[0.18em] text-white/48">Fluxo operacional</div>
-                <div className="mt-4 space-y-3">
-                  {[
-                    "Conta principal conectada",
-                    "Loja Centro selecionada",
-                    "Caixa aberto e sincronizado",
-                    "Retaguarda com leitura ao vivo"
-                  ].map((item, index) => (
-                    <div
-                      key={item}
-                      className={`rounded-[1.1rem] px-4 py-3 text-sm ${
-                        index === 2
-                          ? "bg-[linear-gradient(135deg,rgba(22,213,176,0.28),rgba(107,92,255,0.28))] text-white"
-                          : "bg-white/8 text-white/72"
-                      }`}
-                    >
-                      {item}
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                {progressCards.map(([label, width, tone]) => (
+                  <div key={label} className="rounded-[1.15rem] bg-[#f6f8ff] px-4 py-3">
+                    <div className="text-[11px] text-[#76819e]">{label}</div>
+                    <div className="mt-3 h-2 rounded-full bg-[#d9e1f4]">
+                      <div className={`h-full rounded-full ${tone}`} style={{ width }} />
                     </div>
-                  ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[1.7rem] bg-[linear-gradient(180deg,#102653,#081325)] p-5 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.18em] text-white/46">Fluxo operacional</div>
+                  <div className="mt-2 text-lg font-semibold">Retaguarda sincronizada</div>
+                </div>
+                <div className="rounded-full bg-white/8 px-3 py-1 text-[11px] font-semibold text-white/70">Ao vivo</div>
+              </div>
+
+              <div className="mt-5 space-y-3">
+                {flowSteps.map((item, index) => (
+                  <div
+                    key={item}
+                    className={`rounded-[1.15rem] px-4 py-3 text-sm ${
+                      index === 2
+                        ? "bg-[linear-gradient(135deg,rgba(22,213,176,0.34),rgba(107,92,255,0.32))] text-white"
+                        : "bg-white/7 text-white/74"
+                    }`}
+                  >
+                    {item}
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-5 rounded-[1.25rem] border border-white/8 bg-white/6 px-4 py-4">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-white/44">Agilidade operacional</div>
+                <div className="mt-3 flex items-end justify-between gap-3">
+                  <div>
+                    <div className="text-2xl font-semibold text-[#16d5b0]">2x</div>
+                    <div className="mt-1 text-sm text-white/62">mais velocidade no fechamento</div>
+                  </div>
+                  <div className="h-16 w-24 rounded-[1rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.02))] p-3">
+                    <div className="flex h-full items-end gap-2">
+                      {[36, 58, 74].map((height, index) => (
+                        <div
+                          key={height}
+                          className={`w-full rounded-full ${index === 0 ? "bg-[#16d5b0]/85" : index === 1 ? "bg-[#6b5cff]/85" : "bg-[#ffbe45]/85"}`}
+                          style={{ height: `${height}%` }}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="absolute bottom-0 left-1/2 h-24 w-24 -translate-x-1/2 rounded-[1.4rem] bg-[linear-gradient(180deg,#1a2a43,#0b1420)] shadow-[0_20px_38px_rgba(2,7,15,0.5)]" />
-        <div className="absolute bottom-12 left-1/2 h-6 w-44 -translate-x-1/2 rounded-full bg-[#08111e]" />
-        <div className="absolute bottom-4 left-1/2 h-6 w-64 -translate-x-1/2 rounded-full bg-[#030915]/72 blur-md" />
+        <div className="absolute -right-1 bottom-8 hidden rounded-[1.4rem] border border-white/10 bg-[linear-gradient(135deg,rgba(22,213,176,0.18),rgba(107,92,255,0.24))] px-5 py-4 text-white shadow-[0_18px_40px_rgba(2,8,18,0.28)] sm:block">
+          <div className="text-[10px] uppercase tracking-[0.18em] text-white/56">Status do caixa</div>
+          <div className="mt-2 text-lg font-semibold">Venda liberada</div>
+          <div className="mt-1 text-sm text-white/70">Caixa aberto e sincronizado</div>
+        </div>
       </div>
     </div>
   );
