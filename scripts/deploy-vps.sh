@@ -678,7 +678,17 @@ build_images() {
 start_stack() {
   log "Subindo stack Docker da aplicacao"
   cd "${APP_DIR}"
-  if ! compose up -d --remove-orphans; then
+
+  if ! compose up -d --remove-orphans api web; then
+    dump_stack_diagnostics
+    echo "Falha ao subir os containers principais da aplicacao."
+    exit 1
+  fi
+
+  wait_for_container_health "api" 45
+  wait_for_container_health "web" 45
+
+  if ! compose up -d --force-recreate --no-deps nginx; then
     dump_stack_diagnostics
     echo "Falha ao subir a stack Docker da aplicacao."
     exit 1
