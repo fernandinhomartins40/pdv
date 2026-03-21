@@ -51,4 +51,4 @@ USER node
 
 EXPOSE 3000
 
-CMD ["node", "apps/web/node_modules/next/dist/bin/next", "start", "--hostname", "0.0.0.0", "--port", "3000"]
+CMD ["node", "apps/web/node_modules/next/dist/bin/next", "start", "apps/web", "--hostname", "0.0.0.0", "--port", "3000"]

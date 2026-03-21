@@ -678,7 +678,11 @@ build_images() {
 start_stack() {
   log "Subindo stack Docker da aplicacao"
   cd "${APP_DIR}"
-  compose up -d --remove-orphans
+  if ! compose up -d --remove-orphans; then
+    dump_stack_diagnostics
+    echo "Falha ao subir a stack Docker da aplicacao."
+    exit 1
+  fi
 }
 
 configure_nginx() {
