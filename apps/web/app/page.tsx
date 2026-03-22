@@ -248,19 +248,15 @@ function HeroVisual() {
   ];
 
   return (
-    <div className="relative min-h-[420px] lg:min-h-[560px]">
-      <div className="absolute inset-0 rounded-[2.8rem] bg-[radial-gradient(circle_at_14%_20%,rgba(22,213,176,0.12),transparent_24%),radial-gradient(circle_at_86%_14%,rgba(107,92,255,0.18),transparent_28%)]" />
-      <div className="absolute left-6 top-10 size-36 rounded-full bg-[#18d6b4]/16 blur-3xl" />
-      <div className="absolute right-12 top-14 size-40 rounded-full bg-[#6b5cff]/18 blur-3xl" />
+    <div className="relative flex min-h-[420px] items-center justify-center lg:min-h-[520px]">
+      <div className="absolute left-10 top-12 size-32 rounded-full bg-[#18d6b4]/14 blur-3xl" />
+      <div className="absolute right-10 top-10 size-36 rounded-full bg-[#6b5cff]/16 blur-3xl" />
 
-      <FloatingPill className="left-4 top-10 hidden sm:block">R$ 93.540</FloatingPill>
-      <FloatingPill className="right-10 top-14 bg-[#173467]/90">+ 531 itens</FloatingPill>
-      <FloatingPill className="left-12 bottom-16 hidden lg:block bg-[#0d3658]/92">NF-e emitida</FloatingPill>
+      <div className="relative z-10 w-full max-w-[43rem] px-2 sm:px-4">
+        <FloatingPill className="left-4 top-0 hidden sm:block">R$ 93.540</FloatingPill>
+        <FloatingPill className="right-4 top-3 bg-[#173467]/90">+ 531 itens</FloatingPill>
 
-      <div className="absolute left-1/2 top-[54%] w-full max-w-[44rem] -translate-x-1/2 -translate-y-1/2 px-2 sm:px-6">
-        <div className="absolute right-4 top-5 hidden h-[76%] w-[78%] rounded-[2.7rem] border border-white/10 bg-[linear-gradient(160deg,rgba(39,60,96,0.82),rgba(10,20,37,0.96))] shadow-[0_42px_100px_rgba(2,7,15,0.42)] lg:block [transform:rotate(6deg)]" />
-
-        <div className="relative overflow-hidden rounded-[2.6rem] border border-white/10 bg-[linear-gradient(155deg,rgba(16,35,63,0.98),rgba(7,18,33,0.98))] p-4 shadow-[0_42px_100px_rgba(2,7,15,0.55)] sm:p-5">
+        <div className="relative mt-12 overflow-hidden rounded-[2.5rem] border border-white/10 bg-[linear-gradient(155deg,rgba(16,35,63,0.98),rgba(7,18,33,0.98))] p-4 shadow-[0_36px_90px_rgba(2,7,15,0.46)] sm:p-5">
           <div className="absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.14),transparent_72%)]" />
 
           <div className="relative rounded-[1.9rem] border border-white/45 bg-[linear-gradient(180deg,#fdfdff,#eef3ff_48%,#dce5f8)] p-4 shadow-[inset_0_0_0_1px_rgba(10,25,48,0.08)] sm:p-5">
@@ -363,12 +359,12 @@ function HeroVisual() {
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="absolute -right-1 bottom-8 hidden rounded-[1.4rem] border border-white/10 bg-[linear-gradient(135deg,rgba(22,213,176,0.18),rgba(107,92,255,0.24))] px-5 py-4 text-white shadow-[0_18px_40px_rgba(2,8,18,0.28)] sm:block">
-          <div className="text-[10px] uppercase tracking-[0.18em] text-white/56">Status do caixa</div>
-          <div className="mt-2 text-lg font-semibold">Venda liberada</div>
-          <div className="mt-1 text-sm text-white/70">Caixa aberto e sincronizado</div>
+          <div className="absolute bottom-5 right-5 hidden rounded-[1.4rem] border border-white/10 bg-[linear-gradient(135deg,rgba(22,213,176,0.2),rgba(107,92,255,0.24))] px-5 py-4 text-white shadow-[0_18px_40px_rgba(2,8,18,0.26)] sm:block">
+            <div className="text-[10px] uppercase tracking-[0.18em] text-white/56">Status do caixa</div>
+            <div className="mt-2 text-lg font-semibold">Venda liberada</div>
+            <div className="mt-1 text-sm text-white/70">Caixa aberto e sincronizado</div>
+          </div>
         </div>
       </div>
     </div>
@@ -407,7 +403,7 @@ export default function LandingPage() {
             </Link>
           </header>
 
-          <div className="grid gap-12 pb-4 pt-14 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+          <div className="grid gap-14 pb-4 pt-14 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
             <div className="max-w-xl space-y-7 text-white">
               <div className="space-y-5">
                 <h1 className="font-display text-[clamp(3rem,6vw,5.1rem)] leading-[0.92] tracking-[-0.07em]">
