@@ -152,8 +152,6 @@ export function App() {
   const paidAmount = useMemo(() => round(payments.reduce((total, payment) => total + payment.amount, 0)), [payments]);
   const remainingAmount = useMemo(() => round(Math.max(totalAmount - paidAmount, 0)), [paidAmount, totalAmount]);
   const changeAmount = useMemo(() => round(Math.max(paidAmount - totalAmount, 0)), [paidAmount, totalAmount]);
-  const selectedQuantity = selectedItem?.quantity ?? 0;
-  const selectedUnitPrice = selectedItem?.unitPrice ?? 0;
   const selectedDiscount = selectedItem?.discountAmount ?? 0;
   const selectedLineTotal = selectedItem?.totalAmount ?? 0;
   useEffect(() => {
@@ -909,55 +907,42 @@ export function App() {
               </div>
             </Card>
 
-            <div className="summary-grid">
-              <div className="summary-box metric">
-                <span className="summary-kicker">Quantidade</span>
-                <strong className="summary-metric-value">{formatQuantity(selectedQuantity)}</strong>
-              </div>
-              <div className="summary-box center operator compact">
-                <strong className="summary-operator-mark">x</strong>
-              </div>
-              <div className="summary-box metric">
-                <span className="summary-kicker">Valor unitario</span>
-                <strong className="summary-metric-money">{formatCurrency(selectedUnitPrice)}</strong>
-              </div>
-              <div className="summary-box total">
-                <span className="summary-kicker">Valor total</span>
-                <strong className="summary-grand-total">{formatCurrency(selectedLineTotal)}</strong>
-              </div>
-            </div>
-
             <Card className="selected-item-editor">
               <div className="selected-item-header">
                 <strong>{selectedItem?.productName ?? "Selecione um item da venda"}</strong>
                 <span>{selectedItem ? `${selectedItem.unit} · ${selectedItem.barcode || selectedItem.sku}` : "Edicao rapida do item selecionado"}</span>
               </div>
-              <div className="selected-item-grid">
-                <label>
-                  <span>Quantidade</span>
-                  <input
-                    value={selectedItem ? String(selectedItem.quantity).replace(".", ",") : ""}
-                    onChange={(event) => selectedItem && updateQuantity(selectedItem.productId, parseQuantityInput(event.target.value))}
-                    disabled={!selectedItem}
-                  />
-                </label>
-                <label>
-                  <span>Valor unitario</span>
-                  <input
-                    value={selectedItem ? selectedItem.unitPrice.toFixed(2).replace(".", ",") : ""}
-                    onChange={(event) => selectedItem && updateUnitPrice(selectedItem.productId, parseQuantityInput(event.target.value))}
-                    disabled={!selectedItem}
-                  />
-                </label>
-                <label>
-                  <span>Desconto item</span>
-                  <input
-                    value={selectedItem ? selectedDiscount.toFixed(2).replace(".", ",") : ""}
-                    onChange={(event) => selectedItem && updateItemDiscount(selectedItem.productId, parseQuantityInput(event.target.value))}
-                    disabled={!selectedItem}
-                  />
-                </label>
-              </div>
+              {selectedItem ? (
+                <div className="selected-item-grid">
+                  <label>
+                    <span>Quantidade</span>
+                    <input
+                      value={String(selectedItem.quantity).replace(".", ",")}
+                      onChange={(event) => updateQuantity(selectedItem.productId, parseQuantityInput(event.target.value))}
+                    />
+                  </label>
+                  <label>
+                    <span>Valor unitario</span>
+                    <input
+                      value={selectedItem.unitPrice.toFixed(2).replace(".", ",")}
+                      onChange={(event) => updateUnitPrice(selectedItem.productId, parseQuantityInput(event.target.value))}
+                    />
+                  </label>
+                  <label>
+                    <span>Desconto item</span>
+                    <input
+                      value={selectedDiscount.toFixed(2).replace(".", ",")}
+                      onChange={(event) => updateItemDiscount(selectedItem.productId, parseQuantityInput(event.target.value))}
+                    />
+                  </label>
+                  <div className="selected-item-total">
+                    <span>Total item</span>
+                    <strong>{formatCurrency(selectedLineTotal)}</strong>
+                  </div>
+                </div>
+              ) : (
+                <div className="selected-item-empty">Selecione um item da lista para ajustar quantidade, preco ou desconto.</div>
+              )}
             </Card>
 
             <div className="message-row">

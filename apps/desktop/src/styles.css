@@ -215,7 +215,6 @@ input {
     "scan table"
     "match table"
     "detail table"
-    "summary table"
     "message table"
     "actions table";
   gap: clamp(12px, 1.4vw, 18px);
@@ -237,10 +236,6 @@ input {
 
 .new-sale-layout > .sale-table-card {
   grid-area: table;
-}
-
-.new-sale-layout > .summary-grid {
-  grid-area: summary;
 }
 
 .new-sale-layout > .message-row {
@@ -615,88 +610,9 @@ input {
   color: #2d2418;
 }
 
-.summary-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 0.94fr) 38px minmax(0, 1fr) minmax(0, 1.08fr);
-  gap: 8px;
-  align-items: center;
-}
-
-.summary-box {
-  min-height: 72px;
-  padding: 10px 14px;
-  border-radius: 18px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.94);
-  color: var(--text);
-  box-shadow: var(--shadow);
-  display: grid;
-  gap: 2px;
-}
-
-.summary-box.center {
-  place-items: center;
-  text-align: center;
-}
-
-.summary-box.metric {
-  align-content: center;
-}
-
-.summary-box.operator {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 241, 255, 0.96));
-}
-
-.summary-box.compact {
-  padding: 0;
-  min-height: 0;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-}
-
-.summary-box.total {
-  background: var(--gradient-dark);
-  color: white;
-  align-content: center;
-}
-
-.summary-kicker {
-  color: #796b93;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-}
-
 .muted-line {
   color: var(--text-muted);
   font-weight: 600;
-}
-
-.summary-metric-value,
-.summary-metric-money {
-  font-size: 1.38rem;
-  line-height: 1;
-}
-
-.summary-metric-money {
-  color: #25314f;
-}
-
-.summary-operator-mark {
-  font-size: 1.5rem;
-  line-height: 1;
-  color: #6b2eff;
-}
-
-.summary-box.total .summary-kicker {
-  color: rgba(255, 255, 255, 0.62);
-}
-
-.summary-grand-total {
-  font-size: 1.5rem;
-  line-height: 1;
 }
 
 .selected-item-editor {
@@ -726,7 +642,7 @@ input {
 
 .selected-item-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(132px, 0.9fr);
   gap: 10px;
 }
 
@@ -749,6 +665,44 @@ input {
   padding: 0 10px;
   color: var(--text);
   font-weight: 700;
+}
+
+.selected-item-total {
+  min-height: 38px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(107, 46, 255, 0.14);
+  background: var(--gradient-dark);
+  color: white;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+}
+
+.selected-item-total span {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.selected-item-total strong {
+  font-size: 1.24rem;
+  line-height: 1;
+}
+
+.selected-item-empty {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px dashed rgba(107, 46, 255, 0.16);
+  background: rgba(107, 46, 255, 0.04);
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 600;
 }
 
 .discount-input {
@@ -1273,7 +1227,6 @@ input {
       "match"
       "detail"
       "table"
-      "summary"
       "message"
       "actions";
   }
@@ -1298,7 +1251,6 @@ input {
     grid-template-areas:
       "scan table"
       "detail table"
-      "summary table"
       "message table"
       "actions table";
   }
@@ -1307,8 +1259,8 @@ input {
     display: none;
   }
 
-  .summary-grid {
-    grid-template-columns: minmax(0, 0.9fr) 34px minmax(0, 1fr) minmax(0, 1.08fr);
+  .selected-item-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .sale-table-body {
@@ -1335,10 +1287,6 @@ input {
   .payment-summary-layout,
   .finalize-layout {
     grid-template-columns: 1fr;
-  }
-
-  .summary-grid {
-    grid-template-columns: minmax(0, 0.9fr) 30px minmax(0, 1fr) minmax(0, 1.05fr);
   }
 
   .discount-strip {
@@ -1386,6 +1334,7 @@ input {
     grid-template-columns: 1fr;
   }
 
+  .selected-item-grid,
   .settings-panels {
     grid-template-columns: 1fr;
   }
@@ -1467,24 +1416,6 @@ input {
     font-size: 1.58rem;
   }
 
-  .summary-box {
-    min-height: 64px;
-    padding: 8px 12px;
-  }
-
-  .summary-metric-value,
-  .summary-metric-money {
-    font-size: 1.24rem;
-  }
-
-  .summary-operator-mark {
-    font-size: 1.34rem;
-  }
-
-  .summary-grand-total {
-    font-size: 1.34rem;
-  }
-
   .selected-item-editor {
     gap: 8px;
     padding: 12px !important;
@@ -1505,6 +1436,15 @@ input {
 
   .selected-item-grid input {
     height: 34px;
+  }
+
+  .selected-item-total {
+    min-height: 34px;
+    padding: 7px 10px;
+  }
+
+  .selected-item-total strong {
+    font-size: 1.08rem;
   }
 
   .inline-status-message {
@@ -1560,24 +1500,6 @@ input {
     height: 44px;
   }
 
-  .summary-box {
-    min-height: 58px;
-    padding: 7px 10px;
-  }
-
-  .summary-metric-value,
-  .summary-metric-money {
-    font-size: 1.08rem;
-  }
-
-  .summary-operator-mark {
-    font-size: 1.2rem;
-  }
-
-  .summary-grand-total {
-    font-size: 1.16rem;
-  }
-
   .selected-item-editor {
     gap: 6px;
     padding: 10px !important;
@@ -1589,6 +1511,10 @@ input {
 
   .selected-item-grid input {
     height: 32px;
+  }
+
+  .selected-item-total strong {
+    font-size: 1rem;
   }
 
   .payment-button {
@@ -1618,10 +1544,6 @@ input {
 }
 
 @media (max-width: 780px) {
-  .summary-grid {
-    grid-template-columns: minmax(0, 0.92fr) 28px minmax(0, 1fr) minmax(0, 1fr);
-  }
-
   .payment-grid {
     grid-template-columns: 1fr;
   }
@@ -1634,10 +1556,6 @@ input {
   .payment-summary,
   .final-card {
     padding: 16px !important;
-  }
-
-  .summary-box {
-    padding: 10px 12px !important;
   }
 
   .selected-item-header {
