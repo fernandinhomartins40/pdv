@@ -419,12 +419,18 @@ export default function LandingPage() {
                 </p>
               </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <Link
                   href="/registro"
                   className="inline-flex h-14 items-center justify-center rounded-full bg-[#16d5b0] px-7 text-sm font-semibold text-[#05233c] shadow-[0_20px_40px_rgba(22,213,176,0.24)] transition hover:-translate-y-0.5"
                 >
                   Quero uma demonstracao gratuita
+                </Link>
+                <Link
+                  href="/download"
+                  className="inline-flex h-14 items-center justify-center rounded-full border border-white/16 bg-white/8 px-7 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-white/12"
+                >
+                  Baixar instalador
                 </Link>
                 <a
                   href="#plataforma"

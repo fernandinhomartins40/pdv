@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
-import type { PaymentMethod, Product, SaleStep, UserIdentity } from "@pdv/types";
+import type { PaymentMethod, Product, SaleStep, UserIdentity, XmlImportPreview } from "@pdv/types";
 import { paymentMethods } from "@pdv/types";
 import { Button, Card, ShortcutHint, StatusDot } from "@pdv/ui";
 import {
@@ -19,7 +19,7 @@ import {
   Wallet,
   X
 } from "lucide-react";
-import type { DesktopSettings } from "./contracts";
+import type { DesktopCashSession, DesktopSaleSummary, DesktopSettings, DesktopSyncQueueEntry } from "./contracts";
 
 interface CartItem {
   lineId: string;
@@ -40,6 +40,7 @@ interface ChosenPayment {
   method: PaymentMethod;
   label: string;
   amount: number;
+  reference?: string;
 }
 
 const paymentShortcutMap = new Map(paymentMethods.map((method) => [method.shortcut.toUpperCase(), method.id]));
@@ -76,9 +77,17 @@ function formatAmount(value: number) {
 
 function formatQuantity(value: number) {
   return value.toLocaleString("pt-BR", {
-    minimumFractionDigits: 4,
-    maximumFractionDigits: 4
+    minimumFractionDigits: value % 1 === 0 ? 0 : 3,
+    maximumFractionDigits: 3
   });
+}
+
+function quantityStep(unit?: string | null) {
+  return unit && unit.toUpperCase() !== "UN" ? 0.001 : 1;
+}
+
+function formatDateTime(value: string) {
+  return new Date(value).toLocaleString("pt-BR");
 }
 
 function formatReceiptCode(item: CartItem) {
@@ -106,9 +115,11 @@ export function App() {
   const [online, setOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : false);
   const [syncPending, setSyncPending] = useState(0);
   const [cashSessionOpen, setCashSessionOpen] = useState(false);
-  const [saleStartedAt, setSaleStartedAt] = useState(() => new Date());
+  const [cashSession, setCashSession] = useState<DesktopCashSession | null>(null);
   const [statusMessage, setStatusMessage] = useState("Caixa pronto para iniciar uma nova venda.");
   const [lastSyncError, setLastSyncError] = useState<string | null>(null);
+  const [syncQueue, setSyncQueue] = useState<DesktopSyncQueueEntry[]>([]);
+  const [recentSales, setRecentSales] = useState<DesktopSaleSummary[]>([]);
   const [settings, setSettings] = useState<DesktopSettings>({
     apiBaseUrl: "http://localhost:3333/v1",
     terminalId: "",
@@ -123,6 +134,10 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [syncBusy, setSyncBusy] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
+  const [xmlPayload, setXmlPayload] = useState("");
+  const [xmlMarginPercent, setXmlMarginPercent] = useState("35");
+  const [xmlPreview, setXmlPreview] = useState<XmlImportPreview | null>(null);
+  const [xmlBusy, setXmlBusy] = useState(false);
 
   const barcodeInputRef = useRef<HTMLInputElement | null>(null);
   const discountInputRef = useRef<HTMLInputElement | null>(null);
@@ -136,8 +151,10 @@ export function App() {
   const totalAmount = useMemo(() => round(Math.max(subtotalAmount - discountAmount, 0)), [subtotalAmount, discountAmount]);
   const paidAmount = useMemo(() => round(payments.reduce((total, payment) => total + payment.amount, 0)), [payments]);
   const remainingAmount = useMemo(() => round(Math.max(totalAmount - paidAmount, 0)), [paidAmount, totalAmount]);
+  const changeAmount = useMemo(() => round(Math.max(paidAmount - totalAmount, 0)), [paidAmount, totalAmount]);
   const selectedQuantity = selectedItem?.quantity ?? 0;
   const selectedUnitPrice = selectedItem?.unitPrice ?? 0;
+  const selectedDiscount = selectedItem?.discountAmount ?? 0;
   const selectedLineTotal = selectedItem?.totalAmount ?? 0;
   useEffect(() => {
     void loadBootstrap();
@@ -291,15 +308,39 @@ export function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [items.length, paidAmount, remainingAmount, selectedItemId, settingsOpen, step]);
 
+  function applyBootstrap(data: Awaited<ReturnType<typeof window.pdv.bootstrap>>) {
+    setOperator(data.operator);
+    setSyncPending(data.syncPending);
+    setCashSessionOpen(data.cashSessionOpen);
+    setCashSession(data.cashSession);
+    setSyncQueue(data.syncQueue);
+    setRecentSales(data.recentSales);
+    setLastSyncError(data.lastSyncError);
+    setSettings(data.settings);
+    setSettingsDraft(data.settings);
+  }
+
+  function parseCurrencyInput(value: string) {
+    const normalized = value.replace(/\./g, "").replace(",", ".");
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function parseQuantityInput(value: string) {
+    const parsed = Number(value.replace(",", "."));
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function getXmlMargin() {
+    const parsed = Number(xmlMarginPercent.replace(",", "."));
+    return Number.isFinite(parsed) ? Math.max(parsed, 0) : 35;
+  }
+
   async function loadBootstrap() {
     try {
       const data = await window.pdv.bootstrap();
-      setOperator(data.operator);
-      setSyncPending(data.syncPending);
-      setCashSessionOpen(data.cashSessionOpen);
-      setLastSyncError(data.lastSyncError);
-      setSettings(data.settings);
-      setSettingsDraft(data.settings);
+      applyBootstrap(data);
+      applyBootstrap(await window.pdv.bootstrap());
     } catch (error) {
       reportError("Falha ao iniciar o PDV", error);
     }
@@ -315,9 +356,7 @@ export function App() {
     try {
       const result = await window.pdv.syncNow();
       const data = await window.pdv.bootstrap();
-      setSyncPending(result.syncPending);
-      setLastSyncError(data.lastSyncError);
-      setSettings(data.settings);
+      applyBootstrap(data);
       if (result.processed > 0) {
         setStatusMessage(`${result.processed} operação(ões) sincronizadas com a nuvem.`);
       }
@@ -354,7 +393,6 @@ export function App() {
     setPayments([]);
     setDiscountAmount(0);
     setSelectedItemId(null);
-    setSaleStartedAt(new Date());
     setStep("NEW_SALE");
     setQuery("");
     setStatusMessage(message);
@@ -377,12 +415,7 @@ export function App() {
 
     try {
       const data = await window.pdv.saveSettings(settingsDraft);
-      setSettings(data.settings);
-      setSettingsDraft(data.settings);
-      setOperator(data.operator);
-      setLastSyncError(data.lastSyncError);
-      setSyncPending(data.syncPending);
-      setCashSessionOpen(data.cashSessionOpen);
+      applyBootstrap(data);
       setSettingsOpen(false);
       setStatusMessage("Configuração salva. Executando sincronização.");
       if (online) {
@@ -432,19 +465,16 @@ export function App() {
   }
 
   function upsertItem(product: Product) {
-    if (items.length === 0) {
-      setSaleStartedAt(new Date());
-    }
-
     setItems((current) => {
       const existing = current.find((item) => item.productId === product.id);
       if (existing) {
+        const nextQuantity = Number((existing.quantity + quantityStep(existing.unit)).toFixed(3));
         return current.map((item) =>
           item.productId === product.id
             ? {
                 ...item,
-                quantity: item.quantity + 1,
-                totalAmount: round((item.quantity + 1) * item.unitPrice - item.discountAmount)
+                quantity: nextQuantity,
+                totalAmount: round(nextQuantity * item.unitPrice - item.discountAmount)
               }
             : item
         );
@@ -495,7 +525,8 @@ export function App() {
     }
 
     const selectedItem = items.find((item) => item.productId === selectedItemId);
-    if (selectedItem && selectedItem.quantity + delta <= 0) {
+    const deltaAmount = (selectedItem ? quantityStep(selectedItem.unit) : 1) * delta;
+    if (selectedItem && selectedItem.quantity + deltaAmount <= 0) {
       setSelectedItemId(null);
     }
 
@@ -506,11 +537,11 @@ export function App() {
             return item;
           }
 
-          const quantity = Math.max(item.quantity + delta, 0);
+          const quantity = Math.max(item.quantity + deltaAmount, 0);
           return {
             ...item,
-            quantity,
-            totalAmount: round(quantity * item.unitPrice - item.discountAmount)
+            quantity: Number(quantity.toFixed(3)),
+            totalAmount: round(Number(quantity.toFixed(3)) * item.unitPrice - item.discountAmount)
           };
         })
         .filter((item) => item.quantity > 0)
@@ -518,7 +549,7 @@ export function App() {
   }
 
   function updateQuantity(productId: string, quantity: number) {
-    const safeQuantity = Number.isFinite(quantity) ? Math.max(Math.trunc(quantity), 0) : 1;
+    const safeQuantity = Number.isFinite(quantity) ? Math.max(quantity, 0) : 1;
 
     if (safeQuantity === 0) {
       removeItem(productId);
@@ -530,8 +561,40 @@ export function App() {
         item.productId === productId
           ? {
               ...item,
-              quantity: safeQuantity,
-              totalAmount: round(safeQuantity * item.unitPrice - item.discountAmount)
+              quantity: Number(safeQuantity.toFixed(3)),
+              totalAmount: round(Number(safeQuantity.toFixed(3)) * item.unitPrice - item.discountAmount)
+            }
+          : item
+      )
+    );
+  }
+
+  function updateUnitPrice(productId: string, unitPrice: number) {
+    const safeUnitPrice = Number.isFinite(unitPrice) ? Math.max(unitPrice, 0) : 0;
+
+    setItems((current) =>
+      current.map((item) =>
+        item.productId === productId
+          ? {
+              ...item,
+              unitPrice: round(safeUnitPrice),
+              totalAmount: round(item.quantity * round(safeUnitPrice) - item.discountAmount)
+            }
+          : item
+      )
+    );
+  }
+
+  function updateItemDiscount(productId: string, itemDiscount: number) {
+    const safeDiscount = Number.isFinite(itemDiscount) ? Math.max(itemDiscount, 0) : 0;
+
+    setItems((current) =>
+      current.map((item) =>
+        item.productId === productId
+          ? {
+              ...item,
+              discountAmount: round(Math.min(safeDiscount, item.quantity * item.unitPrice)),
+              totalAmount: round(item.quantity * item.unitPrice - Math.min(safeDiscount, item.quantity * item.unitPrice))
             }
           : item
       )
@@ -558,7 +621,7 @@ export function App() {
 
     setPayments((current) => {
       const remainder = round(totalAmount - current.reduce((sum, item) => sum + item.amount, 0));
-      const amountToAdd = remainder > 0 ? remainder : totalAmount;
+      const amountToAdd = remainder > 0 ? remainder : 0;
       const existing = current.find((item) => item.method === method);
 
       if (existing) {
@@ -593,6 +656,19 @@ export function App() {
     );
   }
 
+  function updatePaymentReference(method: PaymentMethod, reference: string) {
+    setPayments((current) =>
+      current.map((item) =>
+        item.method === method
+          ? {
+              ...item,
+              reference
+            }
+          : item
+      )
+    );
+  }
+
   function removePayment(method: PaymentMethod) {
     setPayments((current) => current.filter((item) => item.method !== method));
     setStatusMessage("Forma de pagamento removida.");
@@ -602,7 +678,7 @@ export function App() {
     try {
       const result = await window.pdv.toggleCashSession(operator.id);
       setCashSessionOpen(result.status === "OPEN");
-      setSyncPending(result.syncPending);
+      applyBootstrap(await window.pdv.bootstrap());
       setStatusMessage(result.status === "OPEN" ? "Caixa aberto para operações." : "Caixa fechado localmente e enviado para sync.");
     } catch (error) {
       reportError("Falha ao alterar o estado do caixa", error);
@@ -638,7 +714,8 @@ export function App() {
         })),
         payments: payments.map((payment) => ({
           method: payment.method,
-          amount: payment.amount
+          amount: payment.amount,
+          reference: payment.reference
         }))
       });
 
@@ -653,6 +730,59 @@ export function App() {
     }
   }
 
+  async function cancelRecentSale(saleId: string) {
+    try {
+      const data = await window.pdv.cancelSale(saleId);
+      applyBootstrap(data);
+      setStatusMessage(`Venda ${saleId.slice(0, 8)} cancelada com sucesso.`);
+    } catch (error) {
+      reportError("Falha ao cancelar venda", error);
+    }
+  }
+
+  async function previewXml() {
+    if (!xmlPayload.trim()) {
+      setStatusMessage("Cole o XML da NF-e antes de gerar a pre-visualizacao.");
+      return;
+    }
+
+    setXmlBusy(true);
+    try {
+      const preview = await window.pdv.previewXmlImport(xmlPayload, getXmlMargin());
+      setXmlPreview(preview);
+      setStatusMessage(`XML ${preview.accessKey.slice(-12)} pronto para revisao.`);
+    } catch (error) {
+      reportError("Falha ao ler XML", error);
+    } finally {
+      setXmlBusy(false);
+    }
+  }
+
+  async function importXml() {
+    if (!xmlPayload.trim()) {
+      setStatusMessage("Cole o XML da NF-e antes de importar.");
+      return;
+    }
+
+    setXmlBusy(true);
+    try {
+      const result = await window.pdv.importXml(xmlPayload, getXmlMargin());
+      setStatusMessage(
+        `XML importado: ${result.importedCount} itens, ${result.createdCount} criados e ${result.updatedCount} atualizados.`
+      );
+      setXmlPayload("");
+      setXmlPreview(null);
+      applyBootstrap(await window.pdv.bootstrap());
+      if (online) {
+        await runSync();
+      }
+    } catch (error) {
+      reportError("Falha ao importar XML", error);
+    } finally {
+      setXmlBusy(false);
+    }
+  }
+
   function handleBarcodeEnter(event: ReactKeyboardEvent<HTMLInputElement>) {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -664,7 +794,7 @@ export function App() {
     <div className="pdv-app">
       <header className="pdv-header">
         <div className="brand-block">
-          <div className="brand-logo">SIGE Lite</div>
+          <div className="brand-logo">PDV Desktop</div>
           <span className="brand-tag">desktop operacional</span>
         </div>
         <div className="header-actions">
@@ -765,7 +895,7 @@ export function App() {
                   >
                     <span className="receipt-code-cell">{formatReceiptCode(item)}</span>
                     <span className="row-name">{item.productName}</span>
-                    <span className="receipt-data-cell">{item.quantity}</span>
+                    <span className="receipt-data-cell">{formatQuantity(item.quantity)}</span>
                     <span className="receipt-data-cell">{formatCurrency(item.unitPrice)}</span>
                     <span className="row-total receipt-total">
                       {formatCurrency(item.totalAmount)}
@@ -796,6 +926,39 @@ export function App() {
                 <strong className="summary-grand-total">{formatCurrency(selectedLineTotal)}</strong>
               </div>
             </div>
+
+            <Card className="selected-item-editor">
+              <div className="selected-item-header">
+                <strong>{selectedItem?.productName ?? "Selecione um item da venda"}</strong>
+                <span>{selectedItem ? `${selectedItem.unit} · ${selectedItem.barcode || selectedItem.sku}` : "Edicao rapida do item selecionado"}</span>
+              </div>
+              <div className="selected-item-grid">
+                <label>
+                  <span>Quantidade</span>
+                  <input
+                    value={selectedItem ? String(selectedItem.quantity).replace(".", ",") : ""}
+                    onChange={(event) => selectedItem && updateQuantity(selectedItem.productId, parseQuantityInput(event.target.value))}
+                    disabled={!selectedItem}
+                  />
+                </label>
+                <label>
+                  <span>Valor unitario</span>
+                  <input
+                    value={selectedItem ? selectedItem.unitPrice.toFixed(2).replace(".", ",") : ""}
+                    onChange={(event) => selectedItem && updateUnitPrice(selectedItem.productId, parseQuantityInput(event.target.value))}
+                    disabled={!selectedItem}
+                  />
+                </label>
+                <label>
+                  <span>Desconto item</span>
+                  <input
+                    value={selectedItem ? selectedDiscount.toFixed(2).replace(".", ",") : ""}
+                    onChange={(event) => selectedItem && updateItemDiscount(selectedItem.productId, parseQuantityInput(event.target.value))}
+                    disabled={!selectedItem}
+                  />
+                </label>
+              </div>
+            </Card>
 
             <div className="message-row">
               <div className="inline-status-message">{statusMessage}</div>
@@ -853,6 +1016,11 @@ export function App() {
                           value={payment.amount.toFixed(2)}
                           onChange={(event) => updatePayment(payment.method, Number(event.target.value.replace(",", ".")))}
                         />
+                        <input
+                          value={payment.reference ?? ""}
+                          onChange={(event) => updatePaymentReference(payment.method, event.target.value)}
+                          placeholder="Referencia / NSU / txid"
+                        />
                         <button type="button" onClick={() => removePayment(payment.method)}>
                           Remover
                         </button>
@@ -876,6 +1044,10 @@ export function App() {
                   <div>
                     <span>Restante</span>
                     <strong className={remainingAmount > 0 ? "warning" : "success"}>{formatCurrency(remainingAmount)}</strong>
+                  </div>
+                  <div>
+                    <span>Troco</span>
+                    <strong className={changeAmount > 0 ? "success" : ""}>{formatCurrency(changeAmount)}</strong>
                   </div>
                 </div>
               </Card>
@@ -927,6 +1099,10 @@ export function App() {
                   <span className="muted-line">Total</span>
                   <strong className="success">{formatCurrency(totalAmount)}</strong>
                 </div>
+                <div>
+                  <span className="muted-line">Troco</span>
+                  <strong>{formatCurrency(changeAmount)}</strong>
+                </div>
               </div>
             </Card>
 
@@ -935,7 +1111,7 @@ export function App() {
               <div className="final-payment-list">
                 {payments.map((payment) => (
                   <div key={payment.method} className="final-payment-item">
-                    <span>{payment.label}</span>
+                    <span>{payment.label}{payment.reference ? ` · ${payment.reference}` : ""}</span>
                     <strong>{formatCurrency(payment.amount)}</strong>
                   </div>
                 ))}
@@ -1052,6 +1228,100 @@ export function App() {
               <span>Pendências de sync: {syncPending}</span>
               <span>Último erro: {lastSyncError ?? "nenhum"}</span>
             </div>
+
+            <div className="settings-panels">
+              <Card className="settings-card">
+                <div className="settings-card-header">
+                  <h3>Fila de sincronizacao</h3>
+                  <span>{syncQueue.length} operacoes pendentes</span>
+                </div>
+                <div className="settings-list">
+                  {syncQueue.length === 0 ? (
+                    <div className="empty-state slim">Nenhuma operacao pendente.</div>
+                  ) : (
+                    syncQueue.map((entry) => (
+                      <div key={entry.id} className="settings-list-row">
+                        <div>
+                          <strong>{entry.operation}</strong>
+                          <span>{entry.entity} · {entry.status} · tentativas {entry.attempts}</span>
+                        </div>
+                        <span>{entry.lastError ?? formatDateTime(entry.createdAt)}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </Card>
+
+              <Card className="settings-card">
+                <div className="settings-card-header">
+                  <h3>Vendas recentes</h3>
+                  <span>{recentSales.length} registros locais</span>
+                </div>
+                <div className="settings-list">
+                  {recentSales.length === 0 ? (
+                    <div className="empty-state slim">Nenhuma venda local registrada.</div>
+                  ) : (
+                    recentSales.map((sale) => (
+                      <div key={sale.id} className="settings-list-row action">
+                        <div>
+                          <strong>{sale.id.slice(0, 8)} · {formatCurrency(sale.totalAmount)}</strong>
+                          <span>{formatDateTime(sale.createdAt)} · {sale.status} · troco {formatCurrency(sale.changeAmount)}</span>
+                        </div>
+                        <button type="button" disabled={sale.status === "CANCELLED"} onClick={() => void cancelRecentSale(sale.id)}>
+                          {sale.status === "CANCELLED" ? "Cancelada" : "Cancelar"}
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </Card>
+            </div>
+
+            <Card className="settings-card xml-card">
+              <div className="settings-card-header">
+                <h3>Recebimento por XML</h3>
+                <span>NF-e de fornecedor</span>
+              </div>
+              <div className="xml-toolbar">
+                <label className="settings-field compact">
+                  <span>Margem %</span>
+                  <input value={xmlMarginPercent} onChange={(event) => setXmlMarginPercent(event.target.value)} />
+                </label>
+                <button type="button" className="settings-secondary" onClick={() => void previewXml()} disabled={xmlBusy}>
+                  Pre-visualizar
+                </button>
+                <button type="button" className="settings-primary" onClick={() => void importXml()} disabled={xmlBusy}>
+                  {xmlBusy ? "Processando..." : "Importar XML"}
+                </button>
+              </div>
+              <textarea
+                className="xml-textarea"
+                value={xmlPayload}
+                onChange={(event) => setXmlPayload(event.target.value)}
+                placeholder="Cole aqui o XML completo da NF-e do fornecedor."
+              />
+              {xmlPreview ? (
+                <div className="xml-preview">
+                  <div className="xml-preview-header">
+                    <strong>{xmlPreview.supplierName ?? "Fornecedor nao identificado"}</strong>
+                    <span>Chave {xmlPreview.accessKey}</span>
+                  </div>
+                  <div className="settings-list">
+                    {xmlPreview.items.map((item, index) => (
+                      <div key={`${item.sku}-${index}`} className="settings-list-row">
+                        <div>
+                          <strong>{item.name}</strong>
+                          <span>{item.matchType} · {item.gtin ?? "Sem GTIN"} · {item.unit ?? "UN"}</span>
+                        </div>
+                        <span>
+                          {formatQuantity(item.quantity)} × {formatCurrency(item.costPrice)} → {formatCurrency(item.salePrice)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </Card>
 
             <div className="settings-actions">
               <button type="button" className="settings-secondary" onClick={() => void runSync()} disabled={syncBusy}>

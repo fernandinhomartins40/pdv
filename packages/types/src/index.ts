@@ -226,12 +226,27 @@ export interface DashboardSnapshot {
 
 export interface XmlImportedProduct {
   name: string;
+  unit?: string | null;
   gtin?: string | null;
   ncm?: string | null;
   cfop?: string | null;
   costPrice: number;
   salePrice: number;
   quantity: number;
+}
+
+export interface XmlImportPreviewItem extends XmlImportedProduct {
+  productId?: string | null;
+  sku?: string | null;
+  productName?: string | null;
+  matchType: "BARCODE" | "NAME" | "NEW";
+}
+
+export interface XmlImportPreview {
+  accessKey: string;
+  supplierName?: string;
+  marginPercent: number;
+  items: XmlImportPreviewItem[];
 }
 
 export const saleSteps: Array<{ id: SaleStep; label: string }> = [

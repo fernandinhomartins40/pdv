@@ -49,6 +49,7 @@ export function parseNfeProducts(xml: string): {
     const costPrice = asNumber(product.vUnCom);
     return {
       name: product.xProd ?? "Produto sem nome",
+      unit: product.uCom ?? "UN",
       gtin: product.cEAN && product.cEAN !== "SEM GTIN" ? product.cEAN : null,
       ncm: product.NCM ?? null,
       cfop: product.CFOP ?? null,

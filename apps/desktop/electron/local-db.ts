@@ -2,7 +2,15 @@ import Database from "better-sqlite3";
 import { randomUUID } from "node:crypto";
 import { demoContext, demoOperator, demoProducts, type PaymentMethod, type Product, type SyncQueueItem, type UserIdentity } from "@pdv/types";
 import { sqliteBootstrapStatements } from "../../../packages/database/src/local-sqlite";
-import type { DesktopBootstrap, DesktopSettings } from "../src/contracts";
+import type {
+  CloseCashSessionInput,
+  DesktopBootstrap,
+  DesktopCashSession,
+  DesktopSaleSummary,
+  DesktopSettings,
+  DesktopSyncQueueEntry,
+  OpenCashSessionInput
+} from "../src/contracts";
 
 interface PersistedSalePayload {
   operatorId: string;
@@ -60,12 +68,16 @@ export class LocalDatabase {
 
   bootstrap(): DesktopBootstrap {
     const settings = this.getSettings();
+    const cashSession = this.getOpenCashSessionSnapshot();
 
     return {
       operator: this.getOperatorFromSettings(settings),
-      priceLabel: "Preço Padrão",
+      priceLabel: "Preco Padrao",
       syncPending: this.getPendingSyncCount(),
-      cashSessionOpen: this.isCashSessionOpen(),
+      cashSessionOpen: cashSession !== null,
+      cashSession,
+      syncQueue: this.getSyncQueueSnapshot(),
+      recentSales: this.listRecentSales(),
       settings,
       lastSyncError: this.getLatestSyncError()
     };
@@ -91,11 +103,11 @@ export class LocalDatabase {
     const operatorChanged = currentSettings.operatorId !== normalized.operatorId;
 
     if ((contextChanged || operatorChanged) && this.isCashSessionOpen()) {
-      throw new Error("Feche o caixa antes de alterar organização, loja ou operador.");
+      throw new Error("Feche o caixa antes de alterar organizacao, loja ou operador.");
     }
 
     if (contextChanged && this.hasBlockingPendingOperations()) {
-      throw new Error("Sincronize ou resolva as pendências antes de trocar organização ou loja.");
+      throw new Error("Sincronize ou resolva as pendencias antes de trocar organizacao ou loja.");
     }
 
     this.writeState("settings.apiBaseUrl", normalized.apiBaseUrl);
@@ -121,7 +133,35 @@ export class LocalDatabase {
     const sanitized = query.trim();
 
     if (!sanitized) {
-      const statement = this.db.prepare(`
+      const rows = this.db
+        .prepare(`
+          SELECT
+            id,
+            sku,
+            barcode,
+            name,
+            unit,
+            cost_price as costPrice,
+            sale_price as salePrice,
+            stock_quantity as stockQuantity,
+            min_stock as minStock,
+            ncm,
+            cfop,
+            is_active as isActive,
+            updated_at as updatedAt,
+            version
+          FROM local_products
+          WHERE is_active = 1
+          ORDER BY name ASC
+          LIMIT 8
+        `)
+        .all() as Array<Record<string, unknown>>;
+
+      return rows.map((row) => this.mapProduct(row));
+    }
+
+    const rows = this.db
+      .prepare(`
         SELECT
           id,
           sku,
@@ -132,46 +172,26 @@ export class LocalDatabase {
           sale_price as salePrice,
           stock_quantity as stockQuantity,
           min_stock as minStock,
+          ncm,
+          cfop,
+          is_active as isActive,
           updated_at as updatedAt,
           version
         FROM local_products
         WHERE is_active = 1
-        ORDER BY name ASC
+          AND (
+            barcode = @exact
+            OR sku = @exact
+            OR name LIKE @contains
+            OR barcode LIKE @contains
+          )
+        ORDER BY
+          CASE WHEN barcode = @exact OR sku = @exact THEN 0 ELSE 1 END,
+          name ASC
         LIMIT 8
-      `);
+      `)
+      .all({ exact: sanitized, contains: `%${sanitized}%` }) as Array<Record<string, unknown>>;
 
-      const rows = statement.all() as Array<Record<string, unknown>>;
-      return rows.map((row) => this.mapProduct(row));
-    }
-
-    const statement = this.db.prepare(`
-      SELECT
-        id,
-        sku,
-        barcode,
-        name,
-        unit,
-        cost_price as costPrice,
-        sale_price as salePrice,
-        stock_quantity as stockQuantity,
-        min_stock as minStock,
-        updated_at as updatedAt,
-        version
-      FROM local_products
-      WHERE is_active = 1
-        AND (
-          barcode = @exact
-          OR sku = @exact
-          OR name LIKE @contains
-          OR barcode LIKE @contains
-        )
-      ORDER BY
-        CASE WHEN barcode = @exact OR sku = @exact THEN 0 ELSE 1 END,
-        name ASC
-      LIMIT 8
-    `);
-
-    const rows = statement.all({ exact: sanitized, contains: `%${sanitized}%` }) as Array<Record<string, unknown>>;
     return rows.map((row) => this.mapProduct(row));
   }
 
@@ -190,13 +210,12 @@ export class LocalDatabase {
 
     const totalPayments = payload.payments.reduce((total, payment) => total + payment.amount, 0);
     if (totalPayments + 0.001 < payload.totalAmount) {
-      throw new Error("O pagamento informado não cobre o total da venda.");
+      throw new Error("O pagamento informado nao cobre o total da venda.");
     }
 
     const saleId = randomUUID();
     const now = new Date().toISOString();
     const settings = this.getSettings();
-
     const validateStock = this.db.prepare(`
       SELECT id, name, stock_quantity as stockQuantity
       FROM local_products
@@ -209,11 +228,11 @@ export class LocalDatabase {
         | undefined;
 
       if (!product) {
-        throw new Error(`Produto ${item.productName} não encontrado no banco local.`);
+        throw new Error(`Produto ${item.productName} nao encontrado no banco local.`);
       }
 
       if (Number(product.stockQuantity) < item.quantity) {
-        throw new Error(`Estoque insuficiente para ${product.name}. Disponível: ${Number(product.stockQuantity)}.`);
+        throw new Error(`Estoque insuficiente para ${product.name}. Disponivel: ${Number(product.stockQuantity)}.`);
       }
     }
 
@@ -308,45 +327,13 @@ export class LocalDatabase {
     };
   }
 
-  toggleCashSession(operatorId: string) {
-    const settings = this.getSettings();
-    const open = this.db.prepare("SELECT * FROM cash_sessions WHERE status = 'OPEN' LIMIT 1").get() as
-      | { id: string; opened_at: string }
-      | undefined;
-
-    if (open) {
-      const closedAt = new Date().toISOString();
-
-      this.db
-        .prepare(`
-          UPDATE cash_sessions
-          SET status = 'CLOSED',
-              closed_at = @closedAt,
-              closing_amount = 0
-          WHERE id = @id
-        `)
-        .run({
-          id: open.id,
-          closedAt
-        });
-
-      this.enqueue("cash_session", "CLOSE_CASH_SESSION", {
-        cashSessionId: open.id,
-        organizationId: settings.organizationId,
-        storeId: settings.storeId,
-        operatorId,
-        operatorName: settings.operatorName,
-        operatorEmail: settings.operatorEmail,
-        closedAt,
-        closingAmount: 0
-      });
-
-      return {
-        status: "CLOSED" as const,
-        syncPending: this.getPendingSyncCount()
-      };
+  openCashSession(payload: OpenCashSessionInput) {
+    if (this.isCashSessionOpen()) {
+      throw new Error("Ja existe um caixa aberto para este terminal.");
     }
 
+    const settings = this.getSettings();
+    const openingAmount = this.normalizeMoney(payload.openingAmount);
     const id = randomUUID();
     const openedAt = new Date().toISOString();
 
@@ -355,24 +342,25 @@ export class LocalDatabase {
         INSERT INTO cash_sessions (
           id, opened_by_id, opened_at, opening_amount, status
         ) VALUES (
-          @id, @openedById, @openedAt, 0, 'OPEN'
+          @id, @openedById, @openedAt, @openingAmount, 'OPEN'
         )
       `)
       .run({
         id,
-        openedById: operatorId,
-        openedAt
+        openedById: payload.operatorId,
+        openedAt,
+        openingAmount
       });
 
     this.enqueue("cash_session", "OPEN_CASH_SESSION", {
       cashSessionId: id,
       organizationId: settings.organizationId,
       storeId: settings.storeId,
-      operatorId,
+      operatorId: payload.operatorId,
       operatorName: settings.operatorName,
       operatorEmail: settings.operatorEmail,
       openedAt,
-      openingAmount: 0
+      openingAmount
     });
 
     return {
@@ -381,9 +369,67 @@ export class LocalDatabase {
     };
   }
 
+  toggleCashSession(operatorId: string) {
+    if (this.isCashSessionOpen()) {
+      return this.closeCashSession({
+        operatorId,
+        closingAmount: 0
+      });
+    }
+
+    return this.openCashSession({
+      operatorId,
+      openingAmount: 0
+    });
+  }
+
+  closeCashSession(payload: CloseCashSessionInput) {
+    const settings = this.getSettings();
+    const open = this.db.prepare("SELECT id FROM cash_sessions WHERE status = 'OPEN' LIMIT 1").get() as
+      | { id: string }
+      | undefined;
+
+    if (!open) {
+      throw new Error("Nao existe um caixa aberto para fechamento.");
+    }
+
+    const closingAmount = this.normalizeMoney(payload.closingAmount);
+    const closedAt = new Date().toISOString();
+
+    this.db
+      .prepare(`
+        UPDATE cash_sessions
+        SET status = 'CLOSED',
+            closed_at = @closedAt,
+            closing_amount = @closingAmount
+        WHERE id = @id
+      `)
+      .run({
+        id: open.id,
+        closedAt,
+        closingAmount
+      });
+
+    this.enqueue("cash_session", "CLOSE_CASH_SESSION", {
+      cashSessionId: open.id,
+      organizationId: settings.organizationId,
+      storeId: settings.storeId,
+      operatorId: payload.operatorId,
+      operatorName: settings.operatorName,
+      operatorEmail: settings.operatorEmail,
+      closedAt,
+      closingAmount
+    });
+
+    return {
+      status: "CLOSED" as const,
+      syncPending: this.getPendingSyncCount()
+    };
+  }
+
   getPendingSyncCount() {
     const row = this.db
-      .prepare("SELECT COUNT(*) as count FROM sync_queue WHERE status IN ('PENDING', 'FAILED')")
+      .prepare("SELECT COUNT(*) as count FROM sync_queue WHERE status IN ('PENDING', 'FAILED', 'CONFLICT')")
       .get() as { count: number };
 
     return row.count;
@@ -415,6 +461,177 @@ export class LocalDatabase {
     }));
   }
 
+  getSyncQueueSnapshot(limit = 12): DesktopSyncQueueEntry[] {
+    const rows = this.db
+      .prepare(`
+        SELECT
+          id,
+          entity,
+          operation,
+          status,
+          attempts,
+          last_error as lastError,
+          scheduled_at as scheduledAt,
+          created_at as createdAt
+        FROM sync_queue
+        WHERE status IN ('PENDING', 'FAILED', 'CONFLICT')
+        ORDER BY created_at DESC
+        LIMIT @limit
+      `)
+      .all({ limit }) as Array<Record<string, unknown>>;
+
+    return rows.map((row) => ({
+      id: String(row.id),
+      entity: String(row.entity),
+      operation: String(row.operation),
+      status: String(row.status),
+      attempts: Number(row.attempts),
+      lastError: row.lastError ? String(row.lastError) : null,
+      scheduledAt: String(row.scheduledAt),
+      createdAt: String(row.createdAt)
+    }));
+  }
+
+  listRecentSales(limit = 8): DesktopSaleSummary[] {
+    const rows = this.db
+      .prepare(`
+        SELECT
+          s.id,
+          s.status,
+          s.subtotal_amount as subtotalAmount,
+          s.discount_amount as discountAmount,
+          s.total_amount as totalAmount,
+          s.synced_at as syncedAt,
+          s.created_at as createdAt,
+          s.updated_at as updatedAt,
+          (
+            SELECT COUNT(*)
+            FROM local_sale_items si
+            WHERE si.sale_id = s.id
+          ) as itemCount,
+          (
+            SELECT COALESCE(SUM(sp.amount), 0)
+            FROM local_sale_payments sp
+            WHERE sp.sale_id = s.id
+          ) as paidAmount
+        FROM local_sales s
+        ORDER BY s.created_at DESC
+        LIMIT @limit
+      `)
+      .all({ limit }) as Array<Record<string, unknown>>;
+
+    return rows.map((row) => {
+      const totalAmount = Number(row.totalAmount);
+      const paidAmount = Number(row.paidAmount);
+
+      return {
+        id: String(row.id),
+        status: String(row.status) as DesktopSaleSummary["status"],
+        itemCount: Number(row.itemCount),
+        subtotalAmount: Number(row.subtotalAmount),
+        discountAmount: Number(row.discountAmount),
+        totalAmount,
+        paidAmount,
+        changeAmount: Math.max(paidAmount - totalAmount, 0),
+        syncedAt: row.syncedAt ? String(row.syncedAt) : null,
+        createdAt: String(row.createdAt),
+        updatedAt: String(row.updatedAt)
+      };
+    });
+  }
+
+  getSaleSummary(saleId: string) {
+    return this.listRecentSales(100).find((sale) => sale.id === saleId) ?? null;
+  }
+
+  cancelSale(saleId: string) {
+    const sale = this.getSaleSummary(saleId);
+    if (!sale) {
+      throw new Error("Venda nao encontrada no banco local.");
+    }
+
+    if (sale.status === "CANCELLED") {
+      return sale;
+    }
+
+    const saleItems = this.db
+      .prepare(`
+        SELECT product_id as productId, quantity
+        FROM local_sale_items
+        WHERE sale_id = @saleId
+      `)
+      .all({ saleId }) as Array<{ productId: string; quantity: number }>;
+
+    if (!saleItems.length) {
+      throw new Error("A venda local nao possui itens para cancelamento.");
+    }
+
+    const queueRows = this.db
+      .prepare(`
+        SELECT id, operation, payload, status
+        FROM sync_queue
+        WHERE entity = 'sale'
+      `)
+      .all() as Array<{ id: string; operation: string; payload: string; status: string }>;
+
+    const createOperationIds = queueRows
+      .filter((row) => {
+        if (row.operation !== "CREATE_SALE" || !["PENDING", "FAILED", "CONFLICT"].includes(row.status)) {
+          return false;
+        }
+
+        try {
+          const payload = JSON.parse(row.payload) as { saleId?: string };
+          return payload.saleId === saleId;
+        } catch {
+          return false;
+        }
+      })
+      .map((row) => row.id);
+
+    const now = new Date().toISOString();
+    const transaction = this.db.transaction(() => {
+      this.db
+        .prepare(`
+          UPDATE local_sales
+          SET status = 'CANCELLED',
+              version = version + 1,
+              updated_at = @updatedAt
+          WHERE id = @saleId
+        `)
+        .run({
+          saleId,
+          updatedAt: now
+        });
+
+      const restoreStock = this.db.prepare(`
+        UPDATE local_products
+        SET stock_quantity = stock_quantity + @quantity,
+            version = version + 1,
+            updated_at = @updatedAt
+        WHERE id = @productId
+      `);
+
+      for (const item of saleItems) {
+        restoreStock.run({
+          productId: item.productId,
+          quantity: item.quantity,
+          updatedAt: now
+        });
+      }
+
+      if (!sale.syncedAt && createOperationIds.length > 0) {
+        const deleteQueue = this.db.prepare("DELETE FROM sync_queue WHERE id = @id");
+        for (const queueId of createOperationIds) {
+          deleteQueue.run({ id: queueId });
+        }
+      }
+    });
+
+    transaction();
+    return this.getSaleSummary(saleId);
+  }
+
   markSyncProcessed(ids: string[]) {
     const updateQueue = this.db.prepare(`
       UPDATE sync_queue
@@ -435,7 +652,7 @@ export class LocalDatabase {
       const syncedAt = new Date().toISOString();
 
       for (const id of queueIds) {
-        const row = this.db.prepare("SELECT operation, payload FROM sync_queue WHERE id = ?").get(id) as
+        const row = this.db.prepare("SELECT operation, payload FROM sync_queue WHERE id = @id").get({ id }) as
           | { operation: string; payload: string }
           | undefined;
 
@@ -691,6 +908,52 @@ export class LocalDatabase {
     return row.count > 0;
   }
 
+  private getOpenCashSessionSnapshot(): DesktopCashSession | null {
+    const row = this.db
+      .prepare(`
+        SELECT id, opened_at as openedAt, opening_amount as openingAmount, status
+        FROM cash_sessions
+        WHERE status = 'OPEN'
+        ORDER BY opened_at DESC
+        LIMIT 1
+      `)
+      .get() as
+      | {
+          id: string;
+          openedAt: string;
+          openingAmount: number;
+          status: string;
+        }
+      | undefined;
+
+    if (!row) {
+      return null;
+    }
+
+    const cashSalesRow = this.db
+      .prepare(`
+        SELECT COALESCE(SUM(sp.amount), 0) as total
+        FROM local_sale_payments sp
+        JOIN local_sales s ON s.id = sp.sale_id
+        WHERE sp.method = 'CASH'
+          AND s.status = 'COMPLETED'
+          AND s.created_at >= @openedAt
+      `)
+      .get({ openedAt: row.openedAt }) as { total: number };
+
+    const openingAmount = Number(row.openingAmount);
+    const cashSalesAmount = Number(cashSalesRow.total);
+
+    return {
+      id: row.id,
+      openedAt: row.openedAt,
+      openingAmount,
+      cashSalesAmount,
+      expectedAmount: openingAmount + cashSalesAmount,
+      status: row.status as DesktopCashSession["status"]
+    };
+  }
+
   private hasBlockingPendingOperations() {
     const row = this.db
       .prepare(`
@@ -727,9 +990,7 @@ export class LocalDatabase {
   }
 
   private ensureCatalogQueued(settings: DesktopSettings, replaceExisting = false) {
-    const isDemoContext =
-      settings.organizationId === demoContext.organizationId && settings.storeId === demoContext.storeId;
-
+    const isDemoContext = settings.organizationId === demoContext.organizationId && settings.storeId === demoContext.storeId;
     const hasQueuedCatalog = this.db
       .prepare(`
         SELECT COUNT(*) as count
@@ -820,9 +1081,9 @@ export class LocalDatabase {
       salePrice: Number(row.salePrice),
       stockQuantity: Number(row.stockQuantity),
       minStock: Number(row.minStock),
-      ncm: null,
-      cfop: null,
-      isActive: true,
+      ncm: row.ncm ? String(row.ncm) : null,
+      cfop: row.cfop ? String(row.cfop) : null,
+      isActive: row.isActive === undefined ? true : Number(row.isActive) === 1,
       updatedAt: String(row.updatedAt),
       version: Number(row.version)
     };
@@ -848,7 +1109,7 @@ export class LocalDatabase {
     const operatorEmail = settings.operatorEmail.trim();
 
     if (!apiBaseUrl || !organizationId || !storeId || !operatorId || !operatorName || !operatorEmail) {
-      throw new Error("Preencha todos os campos de configuração do PDV.");
+      throw new Error("Preencha todos os campos de configuracao do PDV.");
     }
 
     return {
@@ -889,5 +1150,13 @@ export class LocalDatabase {
 
   private deleteState(key: string) {
     this.db.prepare("DELETE FROM sync_state WHERE key = @key").run({ key });
+  }
+
+  private normalizeMoney(value: number) {
+    if (!Number.isFinite(value)) {
+      return 0;
+    }
+
+    return Number(Math.max(value, 0).toFixed(2));
   }
 }

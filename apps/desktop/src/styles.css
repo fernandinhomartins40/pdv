@@ -231,6 +231,10 @@ input {
   grid-area: match;
 }
 
+.new-sale-layout > .selected-item-editor {
+  grid-area: detail;
+}
+
 .new-sale-layout > .sale-table-card {
   grid-area: table;
 }
@@ -690,6 +694,47 @@ input {
   line-height: 1;
 }
 
+.selected-item-editor {
+  display: grid;
+  gap: 14px;
+}
+
+.selected-item-header {
+  display: grid;
+  gap: 4px;
+}
+
+.selected-item-header span {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.selected-item-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.selected-item-grid label {
+  display: grid;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.selected-item-grid label span {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.selected-item-grid input {
+  height: 42px;
+  border-radius: 14px;
+  border: 1px solid rgba(74, 15, 133, 0.16);
+  background: white;
+  padding: 0 12px;
+  color: var(--text);
+}
+
 .discount-input {
   width: 108px;
   text-align: center;
@@ -813,7 +858,7 @@ input {
 .payment-row,
 .final-payment-item {
   display: grid;
-  grid-template-columns: 1fr 130px auto;
+  grid-template-columns: minmax(0, 1fr) 130px minmax(0, 220px) auto;
   gap: 12px;
   align-items: center;
   padding: 14px 16px;
@@ -829,6 +874,10 @@ input {
   background: rgba(239, 79, 95, 0.12);
   color: var(--danger);
   font-weight: 800;
+}
+
+.payment-row strong {
+  min-width: 0;
 }
 
 .payment-summary.totals {
@@ -1049,6 +1098,121 @@ input {
   background: rgba(16, 23, 38, 0.04);
 }
 
+.settings-panels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.settings-card {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: baseline;
+}
+
+.settings-card-header h3 {
+  margin: 0;
+}
+
+.settings-card-header span {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.settings-list {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-list-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(16, 23, 38, 0.04);
+}
+
+.settings-list-row > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.settings-list-row strong,
+.settings-list-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-list-row span {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.settings-list-row.action button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 12px;
+  padding: 0 12px;
+  background: rgba(239, 79, 95, 0.12);
+  color: var(--danger);
+  font-weight: 800;
+}
+
+.settings-list-row.action button:disabled {
+  background: rgba(16, 23, 38, 0.08);
+  color: var(--text-muted);
+}
+
+.settings-field.compact {
+  min-width: 120px;
+}
+
+.xml-card {
+  gap: 16px;
+}
+
+.xml-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.xml-textarea {
+  width: 100%;
+  min-height: 180px;
+  border-radius: 18px;
+  border: 1px solid rgba(74, 15, 133, 0.16);
+  background: white;
+  padding: 14px;
+  resize: vertical;
+  color: var(--text);
+}
+
+.xml-preview {
+  display: grid;
+  gap: 12px;
+}
+
+.xml-preview-header {
+  display: grid;
+  gap: 4px;
+}
+
+.xml-preview-header span {
+  color: var(--text-muted);
+}
+
 .settings-actions {
   display: flex;
   justify-content: flex-end;
@@ -1102,6 +1266,10 @@ input {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .settings-panels {
+    grid-template-columns: 1fr;
+  }
+
   .scan-row > button,
   .bottom-actions > button,
   .payment-actions > button {
@@ -1125,6 +1293,10 @@ input {
 
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .selected-item-grid {
+    grid-template-columns: 1fr;
   }
 
   .sale-table-body {
@@ -1184,6 +1356,10 @@ input {
     grid-template-columns: 1fr;
   }
 
+  .payment-row {
+    grid-template-columns: 1fr;
+  }
+
   .bottom-actions,
   .payment-actions,
   .footer-status,
@@ -1192,6 +1368,11 @@ input {
   }
 
   .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .selected-item-grid,
+  .settings-panels {
     grid-template-columns: 1fr;
   }
 

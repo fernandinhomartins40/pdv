@@ -1,13 +1,110 @@
 import path from "node:path";
 import { app, BrowserWindow, ipcMain } from "electron";
-import type { Product, SyncPushResponse } from "@pdv/types";
+import type { Product, SyncPushResponse, XmlImportPreview } from "@pdv/types";
 import { LocalDatabase } from "./local-db";
-import type { DesktopSettings } from "../src/contracts";
+import type { CloseCashSessionInput, DesktopSettings, OpenCashSessionInput } from "../src/contracts";
 
 let localDb: LocalDatabase;
 
 function getSyncSettings(): DesktopSettings {
   return localDb.getSettings();
+}
+
+async function requestJson<T>(pathname: string, init?: RequestInit, query?: Record<string, string>) {
+  const settings = getSyncSettings();
+  const url = new URL(`${settings.apiBaseUrl}${pathname}`);
+
+  for (const [key, value] of Object.entries(query ?? {})) {
+    url.searchParams.set(key, value);
+  }
+
+  const headers = new Headers(init?.headers);
+  if (!headers.has("Content-Type") && init?.body) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  if (settings.sessionToken) {
+    headers.set("Authorization", `Bearer ${settings.sessionToken}`);
+  }
+
+  const response = await fetch(url, {
+    ...init,
+    headers
+  });
+
+  if (!response.ok) {
+    let message = `Falha HTTP ${response.status}`;
+    try {
+      const errorBody = (await response.json()) as { message?: string };
+      if (errorBody.message) {
+        message = errorBody.message;
+      }
+    } catch {
+      // Ignore parse errors and keep HTTP fallback.
+    }
+
+    throw new Error(message);
+  }
+
+  return (await response.json()) as T;
+}
+
+async function cancelSale(saleId: string) {
+  const sale = localDb.getSaleSummary(saleId);
+  if (!sale) {
+    throw new Error("Venda local nao encontrada.");
+  }
+
+  if (sale.status === "CANCELLED") {
+    return localDb.bootstrap();
+  }
+
+  if (sale.syncedAt) {
+    await requestJson<{ id: string; status: "CANCELLED" }>(`/sales/${saleId}/cancel`, {
+      method: "POST"
+    });
+  }
+
+  localDb.cancelSale(saleId);
+  return localDb.bootstrap();
+}
+
+async function previewXmlImport(xml: string, marginPercent?: number) {
+  const settings = getSyncSettings();
+  return requestJson<XmlImportPreview>(
+    "/xml/preview",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        organizationId: settings.organizationId,
+        storeId: settings.storeId,
+        xml,
+        marginPercent
+      })
+    }
+  );
+}
+
+async function importXml(xml: string, marginPercent?: number) {
+  const settings = getSyncSettings();
+  return requestJson<{
+    accessKey: string;
+    supplierName?: string;
+    importedCount: number;
+    createdCount: number;
+    updatedCount: number;
+  }>(
+    "/xml/import",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        organizationId: settings.organizationId,
+        storeId: settings.storeId,
+        xml,
+        marginPercent
+      })
+    }
+  );
 }
 
 async function syncNow() {
@@ -134,9 +231,18 @@ async function bootstrap() {
   ipcMain.handle("search-products", async (_, query: string) => localDb.searchProducts(query));
   ipcMain.handle("save-sale", async (_, payload: Parameters<LocalDatabase["saveSale"]>[0]) => localDb.saveSale(payload));
   ipcMain.handle("toggle-cash-session", async (_, operatorId: string) => localDb.toggleCashSession(operatorId));
+  ipcMain.handle("open-cash-session", async (_, payload: OpenCashSessionInput) => localDb.openCashSession(payload));
+  ipcMain.handle("close-cash-session", async (_, payload: CloseCashSessionInput) => localDb.closeCashSession(payload));
+  ipcMain.handle("cancel-sale", async (_, saleId: string) => cancelSale(saleId));
   ipcMain.handle("sync-now", async () => syncNow());
   ipcMain.handle("pending-sync-count", async () => localDb.getPendingSyncCount());
   ipcMain.handle("save-settings", async (_, settings: DesktopSettings) => localDb.saveSettings(settings));
+  ipcMain.handle("preview-xml-import", async (_, payload: { xml: string; marginPercent?: number }) =>
+    previewXmlImport(payload.xml, payload.marginPercent)
+  );
+  ipcMain.handle("import-xml", async (_, payload: { xml: string; marginPercent?: number }) =>
+    importXml(payload.xml, payload.marginPercent)
+  );
 
   createWindow();
 
