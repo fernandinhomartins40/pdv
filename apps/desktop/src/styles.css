@@ -772,20 +772,31 @@ input {
 
 .payment-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+  gap: 12px;
 }
 
 .payment-button {
-  min-height: clamp(108px, 18vh, 142px);
+  min-height: clamp(92px, 14vh, 118px);
   border: 0;
-  border-radius: 22px;
-  padding: 14px;
+  border-radius: 20px;
+  padding: 12px;
   display: grid;
   justify-items: center;
-  gap: 10px;
+  gap: 8px;
   color: white;
   box-shadow: var(--shadow);
+}
+
+.payment-button svg {
+  width: 22px;
+  height: 22px;
+}
+
+.payment-button strong {
+  font-size: 0.88rem;
+  line-height: 1.15;
+  text-align: center;
 }
 
 .payment-button.cash { background: #5abf2f; }
@@ -805,13 +816,15 @@ input {
 .payment-summary-layout {
   display: grid;
   grid-template-columns: 1.2fr 0.8fr;
-  gap: 16px;
+  gap: 12px;
+  align-items: start;
 }
 
 .payment-summary {
   color: var(--text);
   display: grid;
-  gap: 16px;
+  gap: 12px;
+  padding: 18px !important;
 }
 
 .payment-summary h3,
@@ -822,25 +835,25 @@ input {
 .payment-list,
 .final-payment-list {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .payment-row,
 .final-payment-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 130px minmax(0, 220px) auto;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  padding: 14px 16px;
-  border-radius: 18px;
+  padding: 12px 14px;
+  border-radius: 16px;
   background: linear-gradient(180deg, #ffffff, #f8f3ff);
   border: 1px solid rgba(123, 47, 190, 0.12);
 }
 
 .payment-row button {
-  height: 42px;
+  height: 38px;
   border: 0;
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(239, 79, 95, 0.12);
   color: var(--danger);
   font-weight: 800;
@@ -856,49 +869,62 @@ input {
 
 .payment-totals {
   display: grid;
-  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .payment-totals div {
   display: grid;
-  gap: 6px;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 242, 255, 0.94));
+  border: 1px solid rgba(123, 47, 190, 0.08);
 }
 
 .payment-totals strong {
-  font-size: 1.75rem;
+  font-size: 1.46rem;
 }
 
 .finalize-layout {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
   align-items: start;
+  gap: 12px;
 }
 
 .final-card {
   color: var(--text);
   display: grid;
-  gap: 18px;
+  gap: 12px;
+  padding: 18px !important;
 }
 
 .final-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .final-grid div {
-  padding: 16px;
-  border-radius: 18px;
+  padding: 12px 14px;
+  border-radius: 16px;
   background: linear-gradient(180deg, #ffffff, #f7f2ff);
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .final-grid strong {
-  font-size: 1.35rem;
+  font-size: 1.18rem;
 }
 
 .final-payment-item {
   grid-template-columns: 1fr auto;
+}
+
+.finalize-layout > .payment-actions {
+  grid-column: 1 / -1;
+  justify-content: flex-start;
+  gap: 12px;
 }
 
 .empty-state {
@@ -910,7 +936,9 @@ input {
 }
 
 .empty-state.slim {
-  min-height: 120px;
+  min-height: 72px;
+  padding: 10px 14px;
+  text-align: center;
 }
 
 .success {
@@ -1232,7 +1260,7 @@ input {
   }
 
   .payment-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .settings-panels {
@@ -1308,7 +1336,7 @@ input {
   }
 
   .payment-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .sale-table-header {
@@ -1332,6 +1360,10 @@ input {
 
   .settings-grid {
     grid-template-columns: 1fr;
+  }
+
+  .final-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .selected-item-grid,
@@ -1453,12 +1485,56 @@ input {
   }
 
   .payment-button {
-    min-height: 94px;
-    padding: 12px;
+    min-height: 80px;
+    padding: 10px;
+  }
+
+  .payment-button strong {
+    font-size: 0.82rem;
   }
 
   .payment-summary,
-  .final-card,
+  .final-card {
+    gap: 10px;
+    padding: 14px !important;
+  }
+
+  .payment-row,
+  .final-payment-item {
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .payment-row input,
+  .payment-row button {
+    height: 34px;
+  }
+
+  .payment-row button {
+    border-radius: 10px;
+  }
+
+  .payment-totals div,
+  .final-grid div {
+    padding: 10px 12px;
+  }
+
+  .payment-totals strong {
+    font-size: 1.24rem;
+  }
+
+  .final-grid {
+    gap: 8px;
+  }
+
+  .final-grid strong {
+    font-size: 1.08rem;
+  }
+
+  .empty-state.slim {
+    min-height: 60px;
+  }
+
   .settings-panel {
     gap: 12px;
   }
@@ -1518,7 +1594,30 @@ input {
   }
 
   .payment-button {
-    min-height: 84px;
+    min-height: 72px;
+    padding: 8px;
+  }
+
+  .payment-button svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .payment-button strong {
+    font-size: 0.76rem;
+  }
+
+  .payment-summary,
+  .final-card {
+    padding: 12px !important;
+  }
+
+  .payment-totals strong {
+    font-size: 1.1rem;
+  }
+
+  .empty-state.slim {
+    min-height: 52px;
   }
 
   .sale-table-body {
@@ -1545,7 +1644,7 @@ input {
 
 @media (max-width: 780px) {
   .payment-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .payment-row,
@@ -1556,6 +1655,10 @@ input {
   .payment-summary,
   .final-card {
     padding: 16px !important;
+  }
+
+  .final-grid {
+    grid-template-columns: 1fr;
   }
 
   .selected-item-header {
